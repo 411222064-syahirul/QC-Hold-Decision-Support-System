@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}QC Line{% endblock %} — QC Hold DSS</title>
+  <meta name="description" content="Portal Operator QC Line — Sistem QC Hold DSS">
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.6.0/fonts/remixicon.css" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  {% if current_user.is_authenticated %}<meta name="user-role" content="qc_line">{% endif %}
+  {% block head %}{% endblock %}
+</head>
+<body>
+
+{% if current_user.is_authenticated %}
+<div class="app-layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <a class="sidebar-brand" href="{{ url_for('qc_line.dashboard') }}">
+      <div class="sidebar-brand-icon" style="background:transparent;border:none;">
+        <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo" style="width:100%;height:100%;object-fit:contain;">
+      </div>
+      <div>
+        <div class="sidebar-brand-text" style="font-size:14px;white-space:normal;line-height:1.2;margin-bottom:4px;">PT. SS HEP</div>
+        <div class="sidebar-brand-sub">QC HOLD DSS</div>
+      </div>
+    </a>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Utama</div>
+      <a class="nav-item {% if request.endpoint == 'qc_line.dashboard' %}active{% endif %}"
+         href="{{ url_for('qc_line.dashboard') }}">
+        <span class="nav-icon"><i class="ri-dashboard-line"></i></span> Dashboard
+      </a>
+
+      <div class="nav-section-label">Data QC</div>
+      <a class="nav-item {% if request.endpoint == 'qc_line.qc_hold_page' %}active{% endif %}"
+         href="{{ url_for('qc_line.qc_hold_page') }}">
+        <span class="nav-icon"><i class="ri-clipboard-line"></i></span> QC Hold
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="dropdown">
+        <div class="user-card" onclick="toggleDropdown(this)">
+          <div class="user-avatar">{{ (current_user.full_name or current_user.username)[0]|upper }}</div>
+          <div class="user-info">
+            <div class="user-info-name truncate">{{ current_user.full_name or current_user.username }}</div>
+            <div class="user-info-role">QC Line Operator</div>
+          </div>
+          <span><i class="ri-arrow-down-s-line"></i></span>
+        </div>
+        <div class="dropdown-menu">
+          <a class="dropdown-item" href="{{ url_for('admin_profile.profile_page') }}"><i class="ri-user-settings-line"></i> Profil</a>
+          <div class="dropdown-divider"></div>
+          <a class="dropdown-item danger" href="{{ url_for('auth.logout') }}"><i class="ri-logout-box-r-line"></i> Logout</a>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <div class="main-content">
+    <!-- Topbar -->
+    <header class="topbar">
+      <button class="btn-icon" onclick="toggleSidebar()" id="menu-toggle"><i class="ri-menu-line"></i></button>
+      <div>
+        <div class="topbar-title">{% block page_title %}Dashboard{% endblock %}</div>
+        <div class="topbar-subtitle">{% block page_subtitle %}{% endblock %}</div>
+      </div>
+      <div class="topbar-actions">
+        {% block topbar_actions %}{% endblock %}
+      </div>
+    </header>
+
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-wrap">
+          {% for category, msg in messages %}
+            <div class="flash-msg {{ category }}">
+              {% if category == 'danger' %}<i class="ri-close-circle-line"></i>{% elif category == 'success' %}<i class="ri-checkbox-circle-line"></i>{% else %}<i class="ri-alert-line"></i>{% endif %}
+              {{ msg }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <!-- Page content -->
+    <div class="page-content">
+      {% block content %}{% endblock %}
+    </div>
+  </div>
+
+</div>
+
+{% else %}
+{% block auth_content %}{% endblock %}
+{% endif %}
+
+<!-- Confirm Dialog -->
+<div class="modal-overlay" id="confirm-overlay">
+  <div class="modal" style="max-width:380px;">
+    <div class="modal-header">
+      <div class="modal-title"><i class="ri-alert-line"></i> Konfirmasi</div>
+    </div>
+    <div class="modal-body">
+      <p id="confirm-msg" style="font-size:14px;color:var(--text-secondary);line-height:1.5;">Yakin?</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="confirm-no">Batal</button>
+      <button class="btn" id="confirm-yes"></button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

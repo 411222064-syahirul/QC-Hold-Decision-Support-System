@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Decision Action{% endblock %}
+{% block page_title %}Decision Action{% endblock %}
+{% block page_subtitle %}Kelola daftar tindakan penanganan QC Hold{% endblock %}
+
+{% block topbar_actions %}
+<button class="btn btn-primary" onclick="ActionPage.openCreate()"><i class="ri-add-line"></i> Tambah Action</button>
+{% endblock %}
+
+{% block content %}
+
+<!-- Info Cards -->
+<div class="stats-grid mb-2" style="grid-template-columns: repeat(4, 1fr);">
+  <div class="stat-card" style="--stat-color:var(--info);--stat-soft:var(--info-soft);">
+    <div class="stat-icon"><i class="ri-tools-line"></i></div>
+    <div>
+      <div class="stat-value" style="font-size:16px;">REPAIR</div>
+      <div class="stat-label">Perbaikan minor (touch-up)</div>
+    </div>
+  </div>
+  <div class="stat-card" style="--stat-color:var(--warning);--stat-soft:var(--warning-soft);">
+    <div class="stat-icon"><i class="ri-refresh-line"></i></div>
+    <div>
+      <div class="stat-value" style="font-size:16px;">REWORK</div>
+      <div class="stat-label">Proses ulang produksi</div>
+    </div>
+  </div>
+  <div class="stat-card" style="--stat-color:var(--orange);--stat-soft:var(--orange-soft);">
+    <div class="stat-icon"><i class="ri-arrow-down-line"></i></div>
+    <div>
+      <div class="stat-value" style="font-size:16px;">DOWNGRADE</div>
+      <div class="stat-label">Turun kelas (grade B/C)</div>
+    </div>
+  </div>
+  <div class="stat-card" style="--stat-color:var(--danger);--stat-soft:var(--danger-soft);">
+    <div class="stat-icon"><i class="ri-delete-bin-line"></i></div>
+    <div>
+      <div class="stat-value" style="font-size:16px;">DISPOSAL</div>
+      <div class="stat-label">Buang / Scrap (tidak bisa diselamatkan)</div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div>
+      <div class="card-title"><i class="ri-focus-3-line"></i> Daftar Decision Action</div>
+      <div class="card-subtitle">Opsi penanganan untuk produk NG</div>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table id="action-table">
+      <thead>
+        <tr>
+          <th>Kode Action</th>
+          <th>Label</th>
+          <th>Deskripsi</th>
+          <th>Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="4" class="table-empty"><div class="spinner"></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal Action -->
+<div class="modal-overlay" id="action-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="action-modal-title">Tambah Action</div>
+      <button class="btn-icon" onclick="Modal.close('action-modal')"><i class="ri-close-line"></i></button>
+    </div>
+    <div class="modal-body">
+      <form id="action-form" onsubmit="event.preventDefault(); ActionPage.save();">
+        <div class="form-group">
+          <label class="form-label" for="action-code">Kode (Unik) <span style="color:var(--danger)">*</span></label>
+          <input id="action-code" type="text" class="form-control" placeholder="Contoh: REPAIR" required style="text-transform:uppercase;">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="action-label">Label Tampilan <span style="color:var(--danger)">*</span></label>
+          <input id="action-label" type="text" class="form-control" placeholder="Contoh: Repair Minor" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="action-desc">Deskripsi</label>
+          <textarea id="action-desc" class="form-control" rows="3" placeholder="Penjelasan kapan aksi ini digunakan..."></textarea>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="Modal.close('action-modal')">Batal</button>
+      <button class="btn btn-primary" onclick="ActionPage.save()"><i class="ri-save-line"></i> Simpan</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>ActionPage.load();</script>
+{% endblock %}

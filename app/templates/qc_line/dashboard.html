@@ -1,0 +1,180 @@
+{% extends "qc_line/base.html" %}
+{% block title %}Dashboard — QC Line{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block page_subtitle %}Ringkasan data inspeksi QC Hold Anda{% endblock %}
+
+{% block content %}
+
+<!-- Info banner: hak akses qc_line -->
+<div class="flash-msg" style="background:var(--info-soft,rgba(59,130,246,0.08));border:1px solid var(--info,#3b82f6);color:var(--text-primary);margin-bottom:20px;border-radius:8px;padding:12px 16px;display:flex;align-items:center;gap:10px;">
+  <i class="ri-information-line" style="color:var(--info,#3b82f6);font-size:18px;"></i>
+  <span>
+    <strong>Hak Akses Anda:</strong> Anda dapat <strong>membuat</strong> data QC Hold baru.
+    Untuk melihat riwayat, data yang tampil hanyalah QC Hold berstatus <strong>CLOSE</strong>.
+    Keputusan tindakan diisi oleh Kepala QC.
+  </span>
+</div>
+
+<!-- Stat Cards -->
+<div class="stats-grid mb-2">
+  <div class="stat-card" style="--stat-color:var(--accent);--stat-soft:var(--accent-soft);">
+    <div class="stat-icon"><i class="ri-clipboard-line"></i></div>
+    <div>
+      <div class="stat-value">{{ stats.total_qc_hold }}</div>
+      <div class="stat-label">Total QC Hold Saya</div>
+    </div>
+  </div>
+  <div class="stat-card" style="--stat-color:var(--warning);--stat-soft:var(--warning-soft);">
+    <div class="stat-icon"><i class="ri-folder-open-line"></i></div>
+    <div>
+      <div class="stat-value">{{ stats.total_open }}</div>
+      <div class="stat-label">QC Hold OPEN</div>
+    </div>
+  </div>
+  <div class="stat-card" style="--stat-color:var(--success);--stat-soft:var(--success-soft);">
+    <div class="stat-icon"><i class="ri-folder-shield-line"></i></div>
+    <div>
+      <div class="stat-value">{{ stats.total_close }}</div>
+      <div class="stat-label">QC Hold CLOSE</div>
+    </div>
+  </div>
+  <div class="stat-card" style="--stat-color:var(--danger);--stat-soft:var(--danger-soft);">
+    <div class="stat-icon"><i class="ri-close-circle-line"></i></div>
+    <div>
+      <div class="stat-value">{{ stats.total_ng }}</div>
+      <div class="stat-label">Total Qty NG</div>
+    </div>
+  </div>
+  <div class="stat-card" style="--stat-color:var(--success);--stat-soft:var(--success-soft);">
+    <div class="stat-icon"><i class="ri-check-double-line"></i></div>
+    <div>
+      <div class="stat-value">{{ stats.total_ok }}</div>
+      <div class="stat-label">Total Qty OK</div>
+    </div>
+  </div>
+</div>
+
+<!-- Dashboard Widgets -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; margin-top: 20px;">
+  
+  <!-- Table: Recent QC Holds -->
+  <div class="card" style="margin-bottom: 0;">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+      <div class="card-title"><i class="ri-history-line"></i> QC Hold Terbaru Saya</div>
+      <div class="card-actions">
+        <a href="{{ url_for('qc_line.qc_hold_page') }}" class="btn btn-sm btn-outline" style="border: 1px solid var(--border-color); background: transparent; color: var(--text-primary); font-size: 13px; padding: 6px 12px; border-radius: 6px; text-decoration: none;">Lihat Semua</a>
+      </div>
+    </div>
+    <div class="table-responsive" style="margin: 0; padding: 0;">
+      <table class="table" style="margin: 0;">
+        <thead>
+          <tr>
+            <th style="padding: 12px 24px; font-size: 12px; text-transform: uppercase; color: var(--text-secondary); font-weight: 600; border-bottom: 1px solid var(--border-color);">Tanggal</th>
+            <th style="padding: 12px 24px; font-size: 12px; text-transform: uppercase; color: var(--text-secondary); font-weight: 600; border-bottom: 1px solid var(--border-color);">QC Code</th>
+            <th style="padding: 12px 24px; font-size: 12px; text-transform: uppercase; color: var(--text-secondary); font-weight: 600; border-bottom: 1px solid var(--border-color);">Produk</th>
+            <th style="padding: 12px 24px; font-size: 12px; text-transform: uppercase; color: var(--text-secondary); font-weight: 600; border-bottom: 1px solid var(--border-color);">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for qc in recent_qc_holds %}
+          <tr style="border-bottom: 1px solid var(--border-color); transition: background 0.2s;">
+            <td style="padding: 14px 24px; font-size: 14px;">{{ qc.inspection_date.strftime('%d %b %Y %H:%M') if qc.inspection_date else '-' }}</td>
+            <td style="padding: 14px 24px; font-size: 14px; font-weight: 600; color: var(--text-primary);">{{ qc.qc_code }}</td>
+            <td style="padding: 14px 24px; font-size: 14px; color: var(--text-secondary);">{{ qc.product_category.name if qc.product_category else '-' }}</td>
+            <td style="padding: 14px 24px;">
+              {% if qc.status == 'OPEN' %}
+              <span style="display: inline-flex; align-items: center; padding: 4px 10px; font-size: 12px; font-weight: 600; border-radius: 20px; background: var(--warning-soft); color: var(--warning);">OPEN</span>
+              {% else %}
+              <span style="display: inline-flex; align-items: center; padding: 4px 10px; font-size: 12px; font-weight: 600; border-radius: 20px; background: var(--success-soft); color: var(--success);">CLOSE</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="4" style="text-align: center; padding: 30px; color: var(--text-secondary); font-size: 14px;">
+              <i class="ri-inbox-line" style="font-size: 32px; display: block; margin-bottom: 10px; opacity: 0.5;"></i>
+              Belum ada data QC Hold
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Chart: Status QC Hold -->
+  <div class="card" style="margin-bottom: 0;">
+    <div class="card-header">
+      <div class="card-title"><i class="ri-pie-chart-2-line"></i> Komposisi Status QC Hold</div>
+    </div>
+    <div class="card-body" style="display:flex; justify-content:center; align-items:center; min-height:300px; padding: 20px;">
+      <canvas id="qcStatusChart"></canvas>
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const ctx = document.getElementById('qcStatusChart');
+  if (ctx) {
+    new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: ['OPEN', 'CLOSE'],
+        datasets: [{
+          data: [{{ stats.total_open }}, {{ stats.total_close }}],
+          backgroundColor: [
+            '#f59e0b', // warning
+            '#10b981'  // success
+          ],
+          borderWidth: 0,
+          hoverOffset: 4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '75%',
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: {
+              usePointStyle: true,
+              padding: 24,
+              font: {
+                family: "'Inter', system-ui, sans-serif",
+                size: 13,
+                weight: '500'
+              },
+              color: '#4b5563'
+            }
+          },
+          tooltip: {
+            backgroundColor: '#1f2937',
+            padding: 12,
+            titleFont: { size: 13, family: "'Inter', sans-serif" },
+            bodyFont: { size: 14, family: "'Inter', sans-serif", weight: 'bold' },
+            callbacks: {
+              label: function(context) {
+                let label = context.label || '';
+                if (label) {
+                  label += ': ';
+                }
+                if (context.parsed !== null) {
+                  label += context.parsed + ' Data';
+                }
+                return label;
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+});
+</script>
+{% endblock %}

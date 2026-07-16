@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Laporan Bulanan{% endblock %}
+{% block page_title %}Laporan Bulanan{% endblock %}
+{% block page_subtitle %}Ringkasan performa QC per periode{% endblock %}
+
+{% block content %}
+
+<!-- Filter -->
+<div class="card mb-2">
+  <div class="d-flex align-center gap-2">
+    <div class="form-group" style="margin-bottom:0;flex:0 0 200px;">
+      <label class="form-label" for="report-month">Periode Bulan</label>
+      <input id="report-month" type="month" class="form-control" onchange="ReportsPage.load()">
+    </div>
+    <div style="margin-top:18px;display:flex;gap:8px;">
+      <button class="btn btn-primary" onclick="ReportsPage.load()"><i class="ri-refresh-line"></i> Tampilkan</button>
+      <button class="btn btn-secondary" onclick="ReportsPage.exportExcel()"><i class="ri-file-excel-line"></i> Export Excel</button>
+      <button class="btn btn-secondary" onclick="ReportsPage.exportPdf()" style="background:var(--danger);border-color:var(--danger);color:#fff;"><i class="ri-file-pdf-2-line"></i> Export PDF</button>
+    </div>
+  </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="stats-grid mb-2" id="report-stats">
+  <!-- filled by JS -->
+</div>
+
+<!-- Charts -->
+<div class="grid-2 mb-2">
+  <div class="card">
+    <div class="card-header"><div class="card-title"><i class="ri-bar-chart-line"></i> Distribusi Keputusan</div></div>
+    <div class="chart-container"><canvas id="report-chart-decision"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-header"><div class="card-title"><i class="ri-line-chart-line"></i> Tren Harian</div></div>
+    <div class="chart-container"><canvas id="report-chart-daily"></canvas></div>
+  </div>
+</div>
+
+<!-- Data Table placeholder -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="ri-table-line"></i> Detail Data QC Hold</div>
+  </div>
+  <div class="table-wrap" id="report-table-wrap">
+    <table class="table" id="report-table">
+      <thead>
+        <tr>
+          <th>NO QC HOLD</th>
+          <th>TGL QC HOLD</th>
+          <th>PRODUK</th>
+          <th>QTY (Plan/Defect)</th>
+          <th>JENIS MASALAH</th>
+          <th>KEPUTUSAN</th>
+        </tr>
+      </thead>
+      <tbody id="report-tbody">
+        <tr><td colspan="6" class="table-empty">Memuat data...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Set default month to current
+  const now = new Date();
+  const mStr = now.toISOString().slice(0,7);
+  document.getElementById('report-month').value = mStr;
+  ReportsPage.load();
+</script>
+{% endblock %}

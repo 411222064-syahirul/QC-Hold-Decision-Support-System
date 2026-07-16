@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Manajemen User{% endblock %}
+{% block page_title %}Manajemen User{% endblock %}
+{% block page_subtitle %}Kelola akses pengguna sistem{% endblock %}
+
+{% block topbar_actions %}
+<button class="btn btn-primary" onclick="UsersPage.openCreate()"><i class="ri-add-line"></i> Tambah User</button>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    <div>
+      <div class="card-title"><i class="ri-user-line"></i> Daftar User</div>
+      <div class="card-subtitle">Pengguna yang memiliki akses ke sistem</div>
+    </div>
+  </div>
+
+  <div class="table-toolbar">
+    <div class="search-input">
+      <i class="ri-search-line search-icon"></i>
+      <input type="text" placeholder="Cari username, nama, atau email..." oninput="UsersPage.search(this.value)">
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table id="users-table">
+      <thead>
+        <tr>
+          <th>NIP</th>
+          <th>Username</th>
+          <th>Nama Lengkap</th>
+          <th>Email</th>
+          <th>Role</th>
+          <th>Status</th>
+          <th>Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="7" class="table-empty"><div class="spinner"></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal User -->
+<div class="modal-overlay" id="user-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="user-modal-title">Tambah User</div>
+      <button class="btn-icon" onclick="Modal.close('user-modal')"><i class="ri-close-line"></i></button>
+    </div>
+    <div class="modal-body">
+      <form id="user-form" onsubmit="event.preventDefault(); UsersPage.saveUser();">
+        <input type="hidden" id="user-id">
+        <div class="form-group">
+          <label class="form-label" for="user-fullname">Nama Lengkap</label>
+          <input id="user-fullname" type="text" class="form-control" placeholder="Nama lengkap user">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="user-nip">NIP</label>
+          <input id="user-nip" type="text" class="form-control" placeholder="Nomor Induk Pegawai">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="user-username">Username <span style="color:var(--danger)">*</span></label>
+          <input id="user-username" type="text" class="form-control" placeholder="username" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="user-email">Email <span style="color:var(--danger)">*</span></label>
+          <input id="user-email" type="email" class="form-control" placeholder="email@domain.com" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="user-password">Password</label>
+          <input id="user-password" type="password" class="form-control" placeholder="••••••••">
+          <div class="text-small text-muted mt-1" id="pw-hint">Wajib diisi</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="user-role">Role</label>
+          <select id="user-role" class="form-control">
+            <option value="">-- Pilih Role --</option>
+            {% for r in roles %}
+            <option value="{{ r.id }}">{{ r.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group d-flex align-center gap-1">
+          <input type="checkbox" id="user-active" checked>
+          <label for="user-active">User Aktif</label>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="Modal.close('user-modal')">Batal</button>
+      <button class="btn btn-primary" onclick="UsersPage.saveUser()"><i class="ri-save-line"></i> Simpan</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>UsersPage.load();</script>
+{% endblock %}

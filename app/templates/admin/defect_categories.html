@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Kategori Defect{% endblock %}
+{% block page_title %}Kategori Defect{% endblock %}
+{% block page_subtitle %}Kelola kategori / root cause defect produk{% endblock %}
+
+{% block topbar_actions %}
+<button class="btn btn-primary" onclick="CatPage.openCreate()"><i class="ri-add-line"></i> Tambah Kategori</button>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    <div>
+      <div class="card-title"><i class="ri-folder-line"></i> Daftar Kategori Defect</div>
+      <div class="card-subtitle">Pengelompokan jenis-jenis defect</div>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table id="cat-table">
+      <thead>
+        <tr>
+          <th>Nama Kategori</th>
+          <th>Deskripsi</th>
+          <th>Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="3" class="table-empty"><div class="spinner"></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal Kategori -->
+<div class="modal-overlay" id="cat-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="cat-modal-title">Tambah Kategori Defect</div>
+      <button class="btn-icon" onclick="Modal.close('cat-modal')"><i class="ri-close-line"></i></button>
+    </div>
+    <div class="modal-body">
+      <form id="cat-form" onsubmit="event.preventDefault(); CatPage.save();">
+        <div class="form-group">
+          <label class="form-label" for="cat-name">Nama Kategori <span style="color:var(--danger)">*</span></label>
+          <input id="cat-name" type="text" class="form-control" placeholder="Contoh: Visual" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="cat-desc">Deskripsi</label>
+          <textarea id="cat-desc" class="form-control" rows="3" placeholder="Penjelasan singkat..."></textarea>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="Modal.close('cat-modal')">Batal</button>
+      <button class="btn btn-primary" onclick="CatPage.save()"><i class="ri-save-line"></i> Simpan</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>CatPage.load();</script>
+{% endblock %}

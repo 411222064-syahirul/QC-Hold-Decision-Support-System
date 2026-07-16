@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block page_subtitle %}Ringkasan data klasifikasi produk NG bulan ini{% endblock %}
+
+{% block content %}
+
+<!-- 6 Summary Cards per SRS §2.1 -->
+<div class="stats-grid mb-2">
+  <div class="stat-card" style="--stat-color:var(--accent);--stat-soft:var(--accent-soft);">
+    <div class="stat-icon"><i class="ri-clipboard-line"></i></div>
+    <div>
+      <div class="stat-value">{{ stats.total_qc_hold }}</div>
+      <div class="stat-label">Total QC Hold</div>
+    </div>
+  </div>
+  <div class="stat-card" style="--stat-color:var(--warning);--stat-soft:var(--warning-soft);">
+    <div class="stat-icon"><i class="ri-folder-open-line"></i></div>
+    <div>
+      <div class="stat-value">{{ stats.total_open }}</div>
+      <div class="stat-label">Total QC OPEN</div>
+    </div>
+  </div>
+  <div class="stat-card" style="--stat-color:var(--success);--stat-soft:var(--success-soft);">
+    <div class="stat-icon"><i class="ri-folder-shield-line"></i></div>
+    <div>
+      <div class="stat-value">{{ stats.total_close }}</div>
+      <div class="stat-label">Total QC CLOSED</div>
+    </div>
+  </div>
+  <div class="stat-card" style="--stat-color:var(--info);--stat-soft:var(--info-soft);">
+    <div class="stat-icon"><i class="ri-tools-line"></i></div>
+    <div>
+      <div class="stat-value">{{ stats.total_repair }}</div>
+      <div class="stat-label">Total Repair</div>
+    </div>
+  </div>
+  <div class="stat-card" style="--stat-color:#8b5cf6;--stat-soft:rgba(139,92,246,0.1);">
+    <div class="stat-icon"><i class="ri-refresh-line"></i></div>
+    <div>
+      <div class="stat-value">{{ stats.total_rework }}</div>
+      <div class="stat-label">Total Rework</div>
+    </div>
+  </div>
+  <div class="stat-card" style="--stat-color:var(--orange);--stat-soft:var(--orange-soft);">
+    <div class="stat-icon"><i class="ri-arrow-down-line"></i></div>
+    <div>
+      <div class="stat-value">{{ stats.total_disposisi }}</div>
+      <div class="stat-label">Total Disposisi</div>
+    </div>
+  </div>
+  <div class="stat-card" style="--stat-color:var(--danger);--stat-soft:var(--danger-soft);">
+    <div class="stat-icon"><i class="ri-delete-bin-line"></i></div>
+    <div>
+      <div class="stat-value">{{ stats.total_disposal }}</div>
+      <div class="stat-label">Total Disposal</div>
+    </div>
+  </div>
+  <div class="stat-card" style="--stat-color:var(--danger);--stat-soft:var(--danger-soft);">
+    <div class="stat-icon"><i class="ri-close-circle-line"></i></div>
+    <div>
+      <div class="stat-value">{{ stats.total_ng }}</div>
+      <div class="stat-label">Total Qty NG</div>
+    </div>
+  </div>
+  <div class="stat-card" style="--stat-color:var(--success);--stat-soft:var(--success-soft);">
+    <div class="stat-icon"><i class="ri-check-double-line"></i></div>
+    <div>
+      <div class="stat-value">{{ stats.total_ok }}</div>
+      <div class="stat-label">Total Qty OK</div>
+    </div>
+  </div>
+  {% if current_user.role.name == 'admin' %}
+  <div class="stat-card" style="--stat-color:var(--primary);--stat-soft:var(--primary-soft);">
+    <div class="stat-icon"><i class="ri-user-line"></i></div>
+    <div>
+      <div class="stat-value">{{ stats.total_users }}</div>
+      <div class="stat-label">Total Pengguna</div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+
+<div class="grid-2 mb-2">
+  <!-- Bar Chart: Decision Action -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="ri-bar-chart-box-line"></i> Distribusi Keputusan</div>
+    </div>
+    <div class="chart-container">
+      <canvas id="chart-decision"></canvas>
+    </div>
+  </div>
+
+  <!-- Line Chart: Monthly Trend -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="ri-line-chart-line"></i> Tren Produk NG (6 Bulan)</div>
+    </div>
+    <div class="chart-container">
+      <canvas id="chart-monthly"></canvas>
+    </div>
+  </div>
+</div>
+
+<div class="form-row-3 mb-2">
+  <!-- Pie 1: Defect Type -->
+  
+
+  <!-- Pie 2: Root Cause / Category -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="ri-pie-chart-2-line"></i> Root Cause</div>
+    </div>
+    <div class="chart-container" style="height:250px;">
+      <canvas id="chart-defect-category"></canvas>
+    </div>
+  </div>
+
+  <!-- Pie 3: OK vs NG -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="ri-donut-chart-line"></i> Qty OK vs NG</div>
+    </div>
+    <div class="chart-container" style="height:250px;">
+      <canvas id="chart-ok-ng"></canvas>
+    </div>
+  </div>
+</div>
+
+<div class="grid-2">
+  <!-- Table: Recent QC Hold -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="ri-history-line"></i> 10 Transaksi QC Hold Terbaru</div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>QC Code</th>
+            <th>Produk</th>
+            <th>Tgl Inspeksi</th>
+            <th>Qty NG</th>
+            <th>Defect</th>
+            <th>Keputusan</th>
+          </tr>
+        </thead>
+        <tbody id="recent-qc-table">
+          <tr><td colspan="6" class="table-empty"><div class="spinner"></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Audit Logs (existing) -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title"><i class="ri-history-line"></i> Aktivitas Terbaru</div>
+        <div class="card-subtitle">Log aktivitas pengguna dalam sistem</div>
+      </div>
+    </div>
+    <div class="table-wrap" style="max-height: 400px; overflow-y: auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>Waktu</th>
+            <th>User</th>
+            <th>Aksi</th>
+            <th>Target</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for log in audit_logs %}
+          <tr>
+            <td class="text-small text-muted" style="white-space:nowrap;">{{ log.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+            <td class="fw-bold">{{ log.user.username if log.user else 'system' }}</td>
+            <td><span class="badge badge-neutral">{{ log.action }}</span></td>
+            <td class="text-small">{{ log.target_table }} #{{ log.target_id }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" class="table-empty">Belum ada log aktivitas</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', async () => {
+    await DashboardCharts.init();
+
+    // Populate recent QC table
+    API.get('/admin/api/stats').then(data => {
+      const tbody = document.getElementById('recent-qc-table');
+      if (data.recent_qc && data.recent_qc.length > 0) {
+        tbody.innerHTML = data.recent_qc.map(q => `
+          <tr>
+            <td class="fw-bold text-small">${esc(q.qc_code)}</td>
+            <td>${esc(q.product_code)}</td>
+            <td class="text-small text-muted">${fmtDate(q.inspection_date)}</td>
+            <td><span class="badge badge-danger">${q.qty_ng}</span></td>
+            <td class="text-small truncate" style="max-width:120px;">${esc(q.defect_category || '—')}</td>
+            <td>${q.decision_action ? `<span class="badge badge-neutral">${esc(q.decision_action)}</span>` : '—'}</td>
+          </tr>
+        `).join('');
+      } else {
+        tbody.innerHTML = '<tr><td colspan="6" class="table-empty">Belum ada data QC Hold</td></tr>';
+      }
+    });
+  });
+</script>
+{% endblock %}

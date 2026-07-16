@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login — Sistem QC C4.5</title>
+  <meta name="description" content="Login ke Sistem Klasifikasi QC Produk NG">
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.6.0/fonts/remixicon.css" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<div class="login-page">
+  <div class="login-bg"></div>
+
+  <div class="login-card">
+    <div class="login-logo" style="text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px;">
+      <div class="login-logo-icon" style="background:transparent;border:none;width:80px;height:80px;margin:0;"><img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo" style="width:100%;height:100%;object-fit:contain;"></div>
+      <div>
+        <div class="login-title" style="font-size:20px;">PT. SS HEP</div>
+        <div class="login-subtitle">QC HOLD DSS</div>
+      </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, msg in messages %}
+        <div class="flash-msg {{ category }}" style="margin-bottom:16px;">
+          {% if category == 'danger' %}<i class="ri-close-circle-line"></i>{% else %}<i class="ri-alert-line"></i>{% endif %} {{ msg }}
+        </div>
+      {% endfor %}
+    {% endwith %}
+
+    <form method="POST" action="{{ url_for('auth.login') }}" id="login-form">
+      <div class="form-group">
+        <label class="form-label" for="username">Username</label>
+        <input id="username" name="username" type="text" class="form-control"
+               placeholder="Masukkan username" autocomplete="username"
+               value="{{ request.form.get('username', '') }}" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <input id="password" name="password" type="password" class="form-control"
+               placeholder="Masukkan password" autocomplete="current-password" required>
+               <button type="button" id="togglePassword" class="toggle-password">
+                <i class="ri-eye-line"></i>
+            </button>
+      </div>
+
+      <div class="form-group d-flex align-center" style="justify-content:space-between;">
+        <label class="form-check">
+          <input type="checkbox" name="remember">
+          <span class="form-check-label">Ingat saya</span>
+        </label>
+      </div>
+
+      <button type="submit" class="login-btn" id="login-btn">
+        <i class="ri-lock-line"></i> Masuk
+      </button>
+    </form>
+
+  </div>
+</div>
+
+<script>
+document.getElementById('login-form').addEventListener('submit', function() {
+  const btn = document.getElementById('login-btn');
+  btn.innerHTML = '<i class="ri-loader-4-line" style="animation: spin 1s linear infinite;"></i> Memproses...';
+  btn.disabled = true;
+});
+
+// Toggle Password
+document.getElementById("togglePassword").addEventListener("click", function () {
+const password = document.getElementById("password");
+const icon = this.querySelector("i");
+if (password.type === "password") {
+    password.type = "text";
+    icon.classList.replace("ri-eye-line", "ri-eye-off-line");
+} else {
+    password.type = "password";
+    icon.classList.replace("ri-eye-off-line", "ri-eye-line");
+}
+});
+</script>
+<style>
+@keyframes spin { 100% { transform: rotate(360deg); } }
+</style>
+</body>
+</html>

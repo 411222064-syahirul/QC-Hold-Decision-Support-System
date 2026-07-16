@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}Model C4.5{% endblock %}
+{% block page_title %}Model Klasifikasi C4.5{% endblock %}
+{% block page_subtitle %}Manajemen versi, training, dan evaluasi performa algoritma C4.5{% endblock %}
+
+{% block topbar_actions %}
+<button class="btn btn-primary" onclick="ModelPage.openTrain()"><i class="ri-robot-2-line"></i> Latih Model Baru</button>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    <div>
+      <div class="card-title"><i class="ri-git-repository-line"></i> Daftar Model Klasifikasi</div>
+      <div class="card-subtitle">Riwayat model yang telah ditraining dari data QC Hold</div>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table id="model-table">
+      <thead>
+        <tr>
+          <th>Nama Model</th>
+          <th>Dataset</th>
+          <th>Waktu Training</th>
+          <th>Akurasi</th>
+          <th>Status</th>
+          <th>Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="6" class="table-empty"><div class="spinner"></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal Train Model -->
+<div class="modal-overlay" id="train-modal">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-header">
+      <div class="modal-title"><i class="ri-robot-2-line"></i> Training Model C4.5</div>
+      <button class="btn-icon" onclick="Modal.close('train-modal')"><i class="ri-close-line"></i></button>
+    </div>
+    <div class="modal-body">
+      <form id="train-form" onsubmit="event.preventDefault(); ModelPage.trainModel();">
+        <div class="form-group">
+          <label class="form-label" for="train-name">Nama Model <span style="color:var(--danger)">*</span></label>
+          <input id="train-name" type="text" class="form-control" placeholder="Contoh: Model C4.5 Q3 2026" required>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="train-max-depth">Max Depth (Opsional)</label>
+            <input id="train-max-depth" type="number" class="form-control" min="1" max="50" placeholder="Kosongi = Unlimited">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="train-min-samples">Min Samples Split (Opsional)</label>
+            <input id="train-min-samples" type="number" class="form-control" min="2" placeholder="Default: 2">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Pilih Dataset <span style="color:var(--danger)">*</span> <small class="text-muted">(bisa lebih dari 1)</small></label>
+          <div id="train-datasets-container" style="max-height:160px; overflow-y:auto; border:1px solid var(--border); padding:10px; border-radius:6px; background:var(--bg-soft);">
+            {% for ds in datasets %}
+            <label style="display:flex; align-items:center; gap:8px; margin-bottom:6px; cursor:pointer; padding:4px; border-radius:4px;" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background='transparent'">
+              <input type="checkbox" name="train_datasets" value="{{ ds.id }}">
+              <span><strong>{{ ds.name }}</strong> <span class="text-muted" style="font-size:11px;">({{ ds.record_count }} records)</span></span>
+            </label>
+            {% endfor %}
+            {% if not datasets %}
+            <div class="table-empty">Belum ada dataset TRAIN.</div>
+            {% endif %}
+          </div>
+          <div class="text-small text-muted" style="margin-top:4px;">Jika memilih lebih dari 1 dataset, data akan digabung secara otomatis.</div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="Modal.close('train-modal')">Batal</button>
+      <button class="btn btn-primary" onclick="ModelPage.trainModel()"><i class="ri-play-line"></i> Mulai Training</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Metrics & Rules Detail -->
+<div class="modal-overlay" id="metrics-modal">
+  <div class="modal" style="max-width:600px;">
+    <div class="modal-header">
+      <div class="modal-title" id="metrics-modal-title"><i class="ri-bar-chart-box-line"></i> Detail Performa Model</div>
+      <button class="btn-icon" onclick="Modal.close('metrics-modal')"><i class="ri-close-line"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="stats-grid" id="metrics-grid" style="grid-template-columns: repeat(4,1fr); gap:12px; margin-bottom:20px;"></div>
+      <div>
+        <label class="form-label" style="margin-bottom:6px;"><i class="ri-code-s-slash-line"></i> Decision Rules (Format IF-THEN)</label>
+        <div style="background:var(--bg-soft); border:1px solid var(--border); border-radius:8px; padding:14px; max-height:260px; overflow-y:auto;">
+          <pre id="metrics-rules" style="font-family:'Courier New',monospace; font-size:12px; color:var(--text-primary); margin:0; white-space:pre-wrap;"></pre>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="Modal.close('metrics-modal')">Tutup</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>ModelPage.load();</script>
+{% endblock %}

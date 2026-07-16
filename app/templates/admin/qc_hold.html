@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% block title %}Data QC Hold{% endblock %}
+{% block page_title %}Data QC Hold{% endblock %}
+{% block page_subtitle %}Kelola data inspeksi Quality Control{% endblock %}
+
+{% block topbar_actions %}
+<input type="file" id="import-excel" accept=".xlsx, .xls" style="display: none;" onchange="QcHoldPage.importExcel(event)">
+<button class="btn btn-secondary" onclick="document.getElementById('import-excel').click()"><i class="ri-file-excel-line"></i> Import Excel</button>
+<button class="btn btn-primary" onclick="QcHoldPage.openCreate()"><i class="ri-add-line"></i> Tambah QC Hold</button>
+{% endblock %}
+
+{% block content %}
+
+<div class="card">
+  <div class="card-header">
+    <div>
+      <div class="card-title"><i class="ri-clipboard-line"></i> Daftar QC Hold</div>
+      <div class="card-subtitle">Data hasil inspeksi quality control</div>
+    </div>
+  </div>
+
+  <!-- Tabs untuk pemisahan Open & Close -->
+  <div class="tabs-container" style="display:flex; gap:16px; border-bottom:1px solid var(--border); margin:0 24px;">
+    <button class="tab-btn active" id="tab-open" onclick="QcHoldPage.setTab('OPEN')" style="background:none; border:none; border-bottom:2px solid var(--accent); color:var(--text-primary); font-weight:600; padding:12px 16px; cursor:pointer;">Kasus Aktif (OPEN)</button>
+    <button class="tab-btn" id="tab-close" onclick="QcHoldPage.setTab('CLOSE')" style="background:none; border:none; border-bottom:2px solid transparent; color:var(--text-secondary); font-weight:500; padding:12px 16px; cursor:pointer;">Riwayat (CLOSE)</button>
+  </div>
+
+  <div class="table-toolbar">
+    <input type="date" id="filter-date" class="form-control" style="max-width:180px;" onchange="QcHoldPage.applyFilters()">
+    <select id="filter-category" class="form-control" style="max-width:200px;" onchange="QcHoldPage.applyFilters()">
+      <option value="">Semua Kategori Defect</option>
+      {% for c in categories %}
+      <option value="{{ c.id }}">{{ c.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="table-wrap">
+    <table id="qc-table">
+      <thead>
+        <tr>
+          <th>NO QC HOLD</th>
+          <th>TGL QC HOLD</th>
+          <th>PART NO.</th>
+          <th>KATEGORI PRODUK</th>
+          <th>QTY (Plan/Defect)</th>
+          <th>JENIS MASALAH</th>
+          <th>TINDAKAN KOREKSI</th>
+          <th>Status</th>
+          <th>Riwayat</th>
+          <th>Sumber</th>
+          <th>Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="11" class="table-empty"><div class="spinner"></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal QC Hold -->
+<div class="modal-overlay" id="qc-modal">
+  <div class="modal" style="max-width:640px;">
+    <div class="modal-header">
+      <div class="modal-title" id="qc-modal-title">Tambah QC Hold</div>
+      <button class="btn-icon" onclick="Modal.close('qc-modal')"><i class="ri-close-line"></i></button>
+    </div>
+    <div class="modal-body">
+      <form id="qc-form" onsubmit="event.preventDefault(); QcHoldPage.save();">
+          <input type="hidden" id="qc-id">
+          
+          <div class="form-group">
+            <label class="form-label" for="qc-date">TGL QC HOLD <span style="color:var(--danger)">*</span></label>
+            <input id="qc-date" type="datetime-local" class="form-control" required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="qc-part-no">PART NO. <span style="color:var(--danger)">*</span></label>
+              <input id="qc-part-no" type="text" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="qc-line">KATEGORI PRODUK <span style="color:var(--danger)">*</span></label>
+              <select id="qc-line" class="form-control" required>
+                <option value="">Pilih Kategori Produk...</option>
+              </select>
+            </div>
+          </div>
+  
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="qc-qty-total">QTY PLANNING / TOTAL <span style="color:var(--danger)">*</span></label>
+              <input id="qc-qty-total" type="number" class="form-control" min="0" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="qc-qty-ng">QTY DEFECT / NG <span style="color:var(--danger)">*</span></label>
+              <input id="qc-qty-ng" type="number" class="form-control" min="0" required>
+            </div>
+          </div>
+  
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="qc-category">JENIS MASALAH <span style="color:var(--danger)">*</span></label>
+              <select id="qc-category" class="form-control" required>
+                <option value="">Pilih...</option>
+                {% for item in categories %}
+                <option value="{{ item.id }}">{{ item.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="qc-severity">SEVERITY LEVEL <span style="color:var(--danger)">*</span></label>
+              <select id="qc-severity" class="form-control" required>
+                <option value="1">LOW</option>
+                <option value="2">MEDIUM</option>
+                <option value="3">HIGH</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label" for="qc-desc">KETERANGAN / DESKRIPSI</label>
+            <textarea id="qc-desc" class="form-control" rows="2" placeholder="Detail temuan masalah..."></textarea>
+          </div>
+  
+          <div class="form-group" id="qc-action-group">
+            <label class="form-label" for="qc-action">TINDAKAN KOREKSI / KEPUTUSAN</label>
+            <select id="qc-action" class="form-control">
+                <option value="">Pilih (Opsional)...</option>
+                {% for item in actions %}
+                <option value="{{ item.id }}">{{ item.label }}</option>
+                {% endfor %}
+            </select>
+          </div>
+          <div class="form-group" id="group-hasil-perbaikan" style="display: none; background: var(--bg-soft); padding: 12px; border-radius: 8px; border: 1px solid var(--border);">
+            <label class="form-label" for="qc-hasil-perbaikan">HASIL PERBAIKAN <small class="text-muted">(Pilih jika perbaikan telah selesai)</small></label>
+            <select id="qc-hasil-perbaikan" class="form-control">
+                <option value="">Menunggu Perbaikan...</option>
+                <option value="OK">Perbaikan OK (Lanjut Proses Produksi)</option>
+                <option value="NG">Perbaikan NG (Gagal / Disposal)</option>
+            </select>
+          </div>
+          <div id="qc-metadata" style="margin-top: 15px; padding: 12px; background: var(--bg-soft); border: 1px solid var(--border); border-radius: 6px; font-size: 0.85em; color: var(--text-secondary); display: none;">
+            <div style="margin-bottom: 4px;"><strong>Dibuat Oleh:</strong> <span id="meta-created-by">-</span></div>
+            <div style="margin-bottom: 4px;"><strong>Terakhir Diedit:</strong> <span id="meta-updated-by">-</span></div>
+            <div id="meta-action-group" style="display:none;"><strong>Keputusan Oleh:</strong> <span id="meta-action-by">-</span></div>
+          </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="Modal.close('qc-modal')">Batal</button>
+      <button class="btn btn-primary" onclick="QcHoldPage.save()"><i class="ri-save-line"></i> Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: View Detail (read-only) -->
+<div class="modal-overlay" id="qc-view-modal">
+  <div class="modal" style="max-width:700px; padding:0; overflow:hidden;">
+    <div class="modal-body" id="qc-view-body" style="padding:0;">
+      <!-- Diisi oleh JS -->
+    </div>
+    <div class="modal-footer" style="padding: 16px 24px; background: var(--bg-soft); border-top: 1px solid var(--border); display: flex; justify-content: flex-end;">
+      <button class="btn btn-secondary" onclick="Modal.close('qc-view-modal')">Tutup Detail</button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  
+  QcHoldPage.load();
+</script>
+{% endblock %}

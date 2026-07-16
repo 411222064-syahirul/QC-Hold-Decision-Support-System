@@ -1,0 +1,510 @@
+{% extends "qc_line/base.html" %}
+{% block title %}QC Hold — QC Line{% endblock %}
+{% block page_title %}Data QC Hold{% endblock %}
+{% block page_subtitle %}Buat laporan inspeksi, kelola data OPEN, & lihat riwayat CLOSE{% endblock %}
+
+{% block topbar_actions %}
+<input type="file" id="import-excel" accept=".xlsx, .xls" style="display: none;" onchange="QcLinePage.importExcel(event)">
+<button class="btn btn-secondary" onclick="document.getElementById('import-excel').click()"><i class="ri-file-excel-line"></i> Import Excel</button>
+<button class="btn btn-primary" onclick="QcLinePage.openCreate()">
+  <i class="ri-add-line"></i> Tambah QC Hold
+</button>
+{% endblock %}
+
+{% block content %}
+
+<!-- Info Banner -->
+<div class="flash-msg" style="background:var(--info-soft,rgba(59,130,246,0.08));border:1px solid var(--info,#3b82f6);color:var(--text-primary);margin-bottom:20px;border-radius:8px;padding:12px 16px;display:flex;align-items:center;gap:10px;">
+  <i class="ri-information-line" style="color:var(--info,#3b82f6);font-size:18px;"></i>
+  <span>
+    Data dengan status <strong>OPEN</strong> dapat diedit/hapus oleh Anda.
+    Data dengan status <strong>CLOSE</strong> (sudah diputuskan Kepala QC) bersifat <strong>read-only</strong>.
+  </span>
+</div>
+
+<!-- Tabel QC Hold -->
+<div class="card">
+  <div class="card-header">
+    <div>
+      <div class="card-title"><i class="ri-clipboard-line"></i> Data QC Hold Saya</div>
+      <div class="card-subtitle">Kelola QC Hold berstatus OPEN & lihat riwayat CLOSE</div>
+    </div>
+  </div>
+
+  <div class="table-toolbar">
+    <select id="filter-status" class="form-control" style="max-width:160px;" onchange="QcLinePage.applyFilters()">
+      <option value="">Semua Status</option>
+      <option value="OPEN">OPEN</option>
+      <option value="CLOSE">CLOSE</option>
+    </select>
+    <input type="date" id="filter-date" class="form-control" style="max-width:180px;" onchange="QcLinePage.applyFilters()">
+    <select id="filter-category" class="form-control" style="max-width:220px;" onchange="QcLinePage.applyFilters()">
+      <option value="">Semua Kategori Defect</option>
+      {% for c in categories %}
+      <option value="{{ c.id }}">{{ c.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="table-wrap">
+    <table id="qc-table">
+      <thead>
+        <tr>
+          <th>NO QC HOLD</th>
+          <th>TGL QC HOLD</th>
+          <th>PART NO.</th>
+          <th>KATEGORI PRODUK</th>
+          <th>QTY (Plan/Defect)</th>
+          <th>JENIS MASALAH</th>
+          <th>TINDAKAN KOREKSI</th>
+          <th>Status</th>
+          <th>Aksi</th>
+        </tr>
+      </thead>
+      <tbody id="qc-tbody">
+        <tr><td colspan="9" class="table-empty"><div class="spinner"></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     Modal: Tambah QC Hold (TANPA field Decision Action)
+     ═══════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="qc-modal">
+  <div class="modal" style="max-width:640px;">
+    <div class="modal-header">
+      <div class="modal-title" id="qc-modal-title">
+        <i class="ri-add-circle-line"></i> Tambah QC Hold
+      </div>
+      <button class="btn-icon" onclick="Modal.close('qc-modal')"><i class="ri-close-line"></i></button>
+    </div>
+    <div class="modal-body">
+      <form id="qc-form" onsubmit="event.preventDefault(); QcLinePage.save();">
+        <input type="hidden" id="qc-id">
+
+        <div class="form-group">
+          <label class="form-label" for="qc-date">TGL QC HOLD <span style="color:var(--danger)">*</span></label>
+          <input id="qc-date" type="datetime-local" class="form-control" required>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="qc-part-no">PART NO. <span style="color:var(--danger)">*</span></label>
+            <input id="qc-part-no" type="text" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="qc-product">KATEGORI PRODUK <span style="color:var(--danger)">*</span></label>
+            <select id="qc-product" class="form-control" required>
+              <option value="">Pilih Kategori Produk...</option>
+              {% for p in product_categories %}
+              <option value="{{ p.id }}">{{ p.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="qc-qty-total">QTY PLANNING / TOTAL <span style="color:var(--danger)">*</span></label>
+            <input id="qc-qty-total" type="number" class="form-control" min="0" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="qc-qty-ng">QTY DEFECT / NG <span style="color:var(--danger)">*</span></label>
+            <input id="qc-qty-ng" type="number" class="form-control" min="0" required>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="qc-category">JENIS MASALAH <span style="color:var(--danger)">*</span></label>
+            <select id="qc-category" class="form-control" required>
+              <option value="">Pilih...</option>
+              {% for item in categories %}
+              <option value="{{ item.id }}">{{ item.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="qc-severity">SEVERITY LEVEL <span style="color:var(--danger)">*</span></label>
+            <select id="qc-severity" class="form-control" required>
+              <option value="1">LOW</option>
+              <option value="2">MEDIUM</option>
+              <option value="3">HIGH</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="qc-desc">KETERANGAN / DESKRIPSI</label>
+          <textarea id="qc-desc" class="form-control" rows="2" placeholder="Detail temuan masalah..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="qc-notes">CATATAN TAMBAHAN</label>
+          <textarea id="qc-notes" class="form-control" rows="2" placeholder="Catatan lain (opsional)..."></textarea>
+        </div>
+
+        <!-- Informasi: field decision tidak tersedia untuk qc_line -->
+        <div style="background:var(--warning-soft,rgba(245,158,11,0.08));border:1px solid var(--warning,#f59e0b);border-radius:8px;padding:12px 14px;display:flex;gap:10px;align-items:flex-start;margin-top:4px;">
+          <i class="ri-lock-line" style="color:var(--warning,#f59e0b);font-size:16px;margin-top:1px;"></i>
+          <div style="font-size:13px;color:var(--text-secondary);line-height:1.5;">
+            <strong>Field Tindakan Koreksi / Keputusan</strong> akan diisi oleh <strong>Kepala QC</strong>.
+            Data yang Anda buat akan berstatus <strong>OPEN</strong> hingga keputusan ditetapkan.
+          </div>
+        </div>
+        <div id="qc-metadata" style="margin-top: 15px; padding: 12px; background: var(--bg-soft); border: 1px solid var(--border); border-radius: 6px; font-size: 0.85em; color: var(--text-secondary); display: none;">
+          <div style="margin-bottom: 4px;"><strong>Dibuat Oleh:</strong> <span id="meta-created-by">-</span></div>
+          <div style="margin-bottom: 4px;"><strong>Terakhir Diedit:</strong> <span id="meta-updated-by">-</span></div>
+          <div id="meta-action-group" style="display:none;"><strong>Keputusan Oleh:</strong> <span id="meta-action-by">-</span></div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="Modal.close('qc-modal')">Batal</button>
+      <button class="btn btn-primary" onclick="QcLinePage.save()">
+        <i class="ri-save-line"></i> Simpan
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: View Detail (read-only) -->
+  <div class="modal-overlay" id="qc-view-modal">
+    <div class="modal" style="max-width:700px; padding:0; overflow:hidden;">
+      <div class="modal-body" id="qc-view-body" style="padding:0;">
+        <!-- Diisi oleh JS -->
+      </div>
+      <div class="modal-footer" style="padding: 16px 24px; background: var(--bg-soft); border-top: 1px solid var(--border); display: flex; justify-content: flex-end;">
+        <button class="btn btn-secondary" onclick="Modal.close('qc-view-modal')">Tutup Detail</button>
+      </div>
+    </div>
+  </div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+/**
+ * QcLinePage — Halaman QC Hold untuk role qc_line.
+ * - CREATE: buat QC Hold baru (tanpa field decision, status otomatis OPEN)
+ * - UPDATE/DELETE: hanya untuk QC Hold milik sendiri yang berstatus OPEN
+ * - READ: QC Hold CLOSE bersifat read-only (tombol edit/hapus disembunyikan)
+ */
+const QcLinePage = (() => {
+  const API_URL = '/qc_line/api/qc-hold';
+  let _allData = [];
+
+  // ── Load data dari server ──
+  async function load() {
+    try {
+      const data = await API.get(API_URL);
+      _allData = data || [];
+      applyFilters();
+    } catch (e) {
+      document.getElementById('qc-tbody').innerHTML =
+        `<tr><td colspan="8" class="table-empty">Gagal memuat data</td></tr>`;
+    }
+  }
+
+  // ── Render tabel ──
+  function render(rows) {
+    const tbody = document.getElementById('qc-tbody');
+    if (!rows || rows.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="9" class="table-empty">
+        <i class="ri-inbox-line" style="font-size:32px;color:var(--text-muted);display:block;margin-bottom:8px;"></i>
+        Belum ada data QC Hold
+      </td></tr>`;
+      return;
+    }
+    tbody.innerHTML = rows.map(r => {
+      const sev = r.defect_severity == 1 ? '<span class="badge" style="background:var(--success-soft);color:var(--success);">LOW</span>'
+                : r.defect_severity == 2 ? '<span class="badge" style="background:var(--warning-soft);color:var(--warning);">MEDIUM</span>'
+                : '<span class="badge badge-danger">HIGH</span>';
+      const decision = r.decision_action
+        ? `<span class="badge badge-neutral">${esc(r.decision_action)}</span>`
+        : '<span style="color:var(--text-muted)">—</span>';
+      const isOpen = r.status === 'OPEN';
+      const statusBadge = isOpen
+        ? '<span class="badge" style="background:var(--warning-soft);color:var(--warning);">OPEN</span>'
+        : '<span class="badge" style="background:var(--success-soft);color:var(--success);">CLOSE</span>';
+      // Tombol aksi: OPEN → edit & hapus; CLOSE → hanya lihat
+      const actions = isOpen
+        ? `<button class="btn-icon" title="Edit" onclick="QcLinePage.openEdit(${r.id})"><i class="ri-edit-line"></i></button>
+           <button class="btn-icon danger" title="Hapus" onclick="QcLinePage.remove(${r.id})"><i class="ri-delete-bin-line"></i></button>`
+        : `<button class="btn-icon" title="Lihat" onclick="QcLinePage.view(${r.id})"><i class="ri-eye-line"></i></button>`;
+      return `<tr>
+        <td class="fw-bold text-small">${esc(r.qc_code)}</td>
+        <td class="text-small text-muted">${fmtDate(r.inspection_date)}</td>
+        <td><span class="fw-bold">${esc(r.part_no || '—')}</span></td>
+        <td>${esc(r.product_category || '—')}</td>
+        <td><span class="badge badge-neutral">${r.qty_total}</span> / <span class="badge badge-danger">${r.qty_ng}</span></td>
+        <td class="text-small">${esc(r.defect_category || '—')} ${sev}</td>
+        <td>${decision}</td>
+        <td>${statusBadge}</td>
+        <td class="text-nowrap">${actions}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ── Filter lokal ──
+  function applyFilters() {
+    const statusVal = document.getElementById('filter-status').value;
+    const dateVal = document.getElementById('filter-date').value;
+    const catVal = document.getElementById('filter-category').value;
+    let filtered = [..._allData];
+    if (statusVal) filtered = filtered.filter(r => r.status === statusVal);
+    if (dateVal) filtered = filtered.filter(r => r.inspection_date && r.inspection_date.startsWith(dateVal));
+    if (catVal) filtered = filtered.filter(r => String(r.defect_category_id) === catVal);
+    render(filtered);
+  }
+
+  // ── Buka modal tambah ──
+  function openCreate() {
+    document.getElementById('qc-id').value = '';
+    document.getElementById('qc-modal-title').innerHTML = '<i class="ri-add-circle-line"></i> Tambah QC Hold';
+    document.getElementById('qc-form').reset();
+    document.getElementById('qc-metadata').style.display = 'none';
+    document.getElementById('qc-part-no').disabled = false;
+    document.getElementById('qc-part-no').value = '';
+    const now = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    const local = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    document.getElementById('qc-date').value = local;
+    Modal.open('qc-modal');
+  }
+
+  // ── Buka modal edit (hanya untuk OPEN) ──
+  function openEdit(id) {
+    const r = _allData.find(x => x.id === id);
+    if (!r) return;
+    if (r.status !== 'OPEN') {
+      Toast.warn('Data berstatus CLOSE tidak dapat diubah.');
+      return;
+    }
+    document.getElementById('qc-id').value = r.id;
+    document.getElementById('qc-modal-title').innerHTML = '<i class="ri-edit-line"></i> Edit QC Hold';
+    document.getElementById('qc-metadata').style.display = 'block';
+    document.getElementById('meta-created-by').textContent = r.created_by_name || '-';
+    document.getElementById('meta-updated-by').textContent = r.updated_by_name || '-';
+    if(r.action_taken_by_name) {
+      document.getElementById('meta-action-group').style.display = 'block';
+      document.getElementById('meta-action-by').textContent = r.action_taken_by_name;
+    } else {
+      document.getElementById('meta-action-group').style.display = 'none';
+    }
+    // Isi form
+    const d = new Date(r.inspection_date);
+    const pad = n => String(n).padStart(2, '0');
+    document.getElementById('qc-date').value =
+      `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    document.getElementById('qc-part-no').disabled = false;
+    document.getElementById('qc-part-no').value = r.part_no || '';
+    document.getElementById('qc-product').value = r.product_category_id || '';
+    document.getElementById('qc-qty-total').value = r.qty_total;
+    document.getElementById('qc-qty-ng').value = r.qty_ng;
+    document.getElementById('qc-category').value = r.defect_category_id || '';
+    document.getElementById('qc-severity').value = r.defect_severity || 1;
+    document.getElementById('qc-desc').value = r.defect_description || '';
+    document.getElementById('qc-notes').value = r.notes || '';
+    Modal.open('qc-modal');
+  }
+
+  // ── Lihat detail (CLOSE - read only) ──
+  function view(id) {
+    const r = _allData.find(x => x.id === id);
+    if (!r) return;
+    const body = document.getElementById('qc-view-body');
+    body.innerHTML = `
+      <style>
+        .qc-detail-modal .info-label { font-size: 12px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+        .qc-detail-modal .info-value { font-size: 14px; color: var(--text-primary); font-weight: 500; }
+        .qc-detail-modal .info-value i { color: var(--primary); margin-right: 4px; }
+        .qc-detail-modal .detail-header { padding: 24px; background: linear-gradient(135deg, var(--primary) 0%, #1e5dd6 100%); color: white; border-radius: 8px 8px 0 0; }
+        .qc-detail-modal .detail-content { padding: 24px; }
+      </style>
+      <div class="qc-detail-modal">
+        <div class="detail-header">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+              <div style="font-size: 12px; opacity: 0.8; margin-bottom: 4px;">NO QC HOLD</div>
+              <div style="font-size: 24px; font-weight: 700; letter-spacing: 1px;">${esc(r.qc_code)}</div>
+            </div>
+            <span class="badge" style="background: ${r.status==='OPEN' ? 'rgba(255,193,7,0.2)' : 'rgba(76,175,80,0.2)'}; color: ${r.status==='OPEN' ? '#ffd54f' : '#81c784'}; border: 1px solid currentColor; font-size: 14px; padding: 6px 12px;">${r.status}</span>
+          </div>
+        </div>
+        
+        <div class="detail-content">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px;">
+            <div>
+              <div class="info-label">Tanggal Inspeksi</div>
+              <div class="info-value"><i class="ri-calendar-line"></i> ${fmtDate(r.inspection_date)}</div>
+            </div>
+            <div>
+              <div class="info-label">Kategori Produk</div>
+              <div class="info-value"><i class="ri-price-tag-3-line"></i> ${esc(r.product_category || '-')}</div>
+            </div>
+            <div>
+              <div class="info-label">Part NO.</div>
+              <div class="info-value"><i class="ri-barcode-line"></i> ${esc(r.part_no || '-')}</div>
+            </div>
+            <div>
+              <div class="info-label">Jenis Masalah</div>
+              <div class="info-value"><i class="ri-error-warning-line"></i> ${esc(r.defect_category || '-')}</div>
+            </div>
+            <div>
+              <div class="info-label">Tingkat Keparahan (Severity)</div>
+              <div class="info-value">${
+                r.defect_severity == 1 ? '<span class="badge badge-success">LOW</span>' :
+                r.defect_severity == 2 ? '<span class="badge badge-warning">MEDIUM</span>' :
+                '<span class="badge badge-danger">HIGH</span>'
+              }</div>
+            </div>
+            <div style="grid-column: span 2;">
+              <div class="info-label">Kuantitas (QTY)</div>
+              <div style="display: flex; gap: 16px; margin-top: 4px;">
+                <div style="background: var(--bg-soft); padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border); flex: 1; display: flex; align-items: center; justify-content: space-between;">
+                  <span style="font-size: 13px; color: var(--text-secondary);">Total Planning</span>
+                  <span style="font-size: 20px; font-weight: 700; color: var(--text-primary);">${r.qty_total}</span>
+                </div>
+                <div style="background: var(--danger-soft); padding: 12px 16px; border-radius: 8px; border: 1px solid rgba(239,68,68,0.2); flex: 1; display: flex; align-items: center; justify-content: space-between;">
+                  <span style="font-size: 13px; color: var(--danger);">Defect (NG)</span>
+                  <span style="font-size: 20px; font-weight: 700; color: var(--danger);">${r.qty_ng}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="background: var(--bg-soft); border-radius: 8px; padding: 16px; border: 1px solid var(--border); margin-bottom: 24px;">
+            <div style="margin-bottom: 16px;">
+              <div class="info-label">Tindakan Koreksi / Keputusan</div>
+              <div class="info-value" style="font-size: 15px; font-weight: 600; color: var(--primary);"><i class="ri-shield-check-fill"></i> ${esc(r.decision_action || 'Belum ada keputusan')}</div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+              <div>
+                <div class="info-label">Keterangan / Deskripsi</div>
+                <div class="info-value" style="white-space: pre-wrap; font-size: 13px;">${esc(r.defect_description || '-')}</div>
+              </div>
+              <div>
+                <div class="info-label">Catatan Tambahan</div>
+                <div class="info-value" style="white-space: pre-wrap; font-size: 13px;">${esc(r.notes || '-')}</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="border-top: 1px dashed var(--border); padding-top: 16px; background: rgba(0,0,0,0.02); margin: 0 -24px -24px -24px; padding: 16px 24px; border-radius: 0 0 8px 8px;">
+            <div style="display: flex; gap: 24px; font-size: 12px; color: var(--text-secondary); flex-wrap: wrap;">
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <i class="ri-user-add-line"></i>
+                <span><strong>Dibuat:</strong> ${esc(r.created_by_name || '-')}</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <i class="ri-edit-2-line"></i>
+                <span><strong>Diedit:</strong> ${esc(r.updated_by_name || '-')}</span>
+              </div>
+              ${r.action_taken_by_name ? `
+              <div style="display: flex; align-items: center; gap: 6px; color: var(--primary);">
+                <i class="ri-shield-user-line"></i>
+                <span><strong>Diputuskan:</strong> ${esc(r.action_taken_by_name)}</span>
+              </div>` : ''}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    Modal.open('qc-view-modal');
+  }
+
+  // ── Simpan (POST untuk baru, PUT untuk edit) ──
+  async function save() {
+    const id = document.getElementById('qc-id').value;
+    const payload = {
+      inspection_date: document.getElementById('qc-date').value,
+      part_no: document.getElementById('qc-part-no').value.trim(),
+      product_category_id: document.getElementById('qc-product').value || null,
+      qty_total: document.getElementById('qc-qty-total').value,
+      qty_ng: document.getElementById('qc-qty-ng').value,
+      defect_category_id: document.getElementById('qc-category').value || null,
+      defect_severity: document.getElementById('qc-severity').value,
+      defect_description: document.getElementById('qc-desc').value,
+      notes: document.getElementById('qc-notes').value,
+      // decision_action_id TIDAK dikirim — server juga akan mengabaikannya
+    };
+
+    if (!payload.inspection_date) { Toast.warn('Tanggal inspeksi wajib diisi.'); return; }
+    if (!payload.product_category_id) { Toast.warn('Kategori Produk wajib dipilih.'); return; }
+    if (!payload.defect_category_id) { Toast.warn('Jenis Masalah wajib dipilih.'); return; }
+    if (Number(payload.qty_ng) > Number(payload.qty_total)) {
+      Toast.warn('QTY Defect tidak boleh lebih besar dari QTY Planning.');
+      return;
+    }
+
+    try {
+      if (id) {
+        await API.put(`${API_URL}/${id}`, payload);
+        Toast.success('QC Hold berhasil diperbarui.');
+      } else {
+        await API.post(API_URL, payload);
+        Toast.success('QC Hold berhasil ditambahkan! Menunggu keputusan dari Kepala QC.');
+      }
+      Modal.close('qc-modal');
+      load();
+    } catch (e) {
+      Toast.error(e.message || 'Gagal menyimpan data QC Hold.');
+    }
+  }
+
+  // ── Hapus (hanya OPEN) ──
+  async function remove(id) {
+    const r = _allData.find(x => x.id === id);
+    if (!r) return;
+    if (r.status !== 'OPEN') {
+      Toast.warn('Data berstatus CLOSE tidak dapat dihapus.');
+      return;
+    }
+    confirmDelete(`Hapus QC Hold ${r.qc_code}?`, 'Ya, Hapus', 'btn-danger').then(async (ok) => {
+      if (!ok) return;
+      try {
+        await API.delete(`${API_URL}/${id}`);
+        Toast.success('QC Hold berhasil dihapus.');
+        load();
+      } catch (e) {
+        Toast.error(e.message || 'Gagal menghapus data.');
+      }
+    });
+  }
+
+  // ── Import Excel ──
+  async function importExcel(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+      Toast.show('Mengimpor data...');
+      const res = await fetch('/qc_line/api/qc-hold/import', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      
+      if (!res.ok) throw new Error(data.error || 'Gagal mengimpor file');
+      
+      Toast.success(`Berhasil mengimpor ${data.imported_count} data QC Hold`);
+      event.target.value = ''; // Reset input
+      load();
+    } catch (e) {
+      Toast.error(e.message);
+      event.target.value = '';
+    }
+  }
+
+  // Init
+  load();
+
+  return { load, applyFilters, openCreate, openEdit, view, save, remove, importExcel };
+})();
+</script>
+{% endblock %}

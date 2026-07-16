@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}Decision Tree Preview{% endblock %}
+{% block page_title %}Decision Tree — Visualisasi Pohon Keputusan{% endblock %}
+{% block page_subtitle %}Eksplorasi interaktif struktur C4.5 dengan klik, zoom, dan pan{% endblock %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<style>
+  .tree-toolbar {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .legend-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .legend-dot {
+    width: 12px; height: 12px; border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .legend-rect {
+    width: 14px; height: 14px; border-radius: 3px;
+    flex-shrink: 0;
+  }
+  #echarts-tree-container {
+    height: 560px;
+    width: 100%;
+    overflow: hidden;
+    cursor: grab;
+    transition: background .3s;
+  }
+  #echarts-tree-container:active { cursor: grabbing; }
+  .rules-panel pre {
+    font-family: 'Courier New', Consolas, monospace;
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: var(--text-primary);
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Toolbar -->
+<div class="card" style="padding: 16px 20px;">
+  <div class="tree-toolbar">
+    <div class="form-group" style="margin:0; flex: 0 0 320px;">
+      <label class="form-label" for="tree-model-select"><i class="ri-git-repository-line"></i> Pilih Model</label>
+      <select id="tree-model-select" class="form-control" onchange="TreePage.loadTree(this.value)">
+        <option value="">— Pilih Model ML —</option>
+      </select>
+    </div>
+    <button class="btn btn-secondary" onclick="TreePage.refresh()"><i class="ri-refresh-line"></i> Refresh</button>
+  </div>
+  <div class="legend-row">
+    <span style="font-size:12px;font-weight:600;color:var(--text-muted);">Keterangan:</span>
+    <div class="legend-item"><div class="legend-dot" style="background:#6366f1"></div> Node Keputusan (Depth 1)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#0891b2"></div> Node Keputusan (Depth 2)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#d97706"></div> Node Keputusan (Depth 3+)</div>
+    <div class="legend-item"><div class="legend-rect" style="background:#d1fae5;border:1.5px solid #6ee7b7"></div> Leaf (Hasil Akhir)</div>
+    <div class="legend-item" style="margin-left:auto;"><i class="ri-drag-move-2-line" style="font-size:14px;"></i> Drag &amp; scroll untuk navigasi</div>
+  </div>
+</div>
+
+<!-- Tree Visualization -->
+<div class="card">
+  <div class="card-header">
+    <div>
+      <div class="card-title"><i class="ri-node-tree"></i> Pohon Keputusan Interaktif</div>
+      <div class="card-subtitle">Klik node untuk expand/collapse cabang. Scroll untuk zoom.</div>
+    </div>
+  </div>
+  <div id="echarts-tree-container">
+    <div class="empty-state" id="tree-empty">
+      <div class="empty-state-icon"><i class="ri-node-tree"></i></div>
+      <div class="empty-state-title">Pilih Model</div>
+      <div class="empty-state-desc">Silakan pilih model dari dropdown di atas untuk menampilkan visualisasi pohon keputusan C4.5.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Decision Rules -->
+<div class="card rules-panel">
+  <div class="card-header">
+    <div>
+      <div class="card-title"><i class="ri-code-s-slash-line"></i> Decision Rules (Format IF...THEN)</div>
+      <div class="card-subtitle">Aturan logika hasil ekstraksi dari pohon keputusan C4.5</div>
+    </div>
+  </div>
+  <div style="padding:16px; background:var(--bg-soft); border-top:1px solid var(--border); border-radius:0 0 8px 8px; max-height:320px; overflow-y:auto;">
+    <pre id="rules-container">Pilih model terlebih dahulu untuk melihat aturan keputusan.</pre>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  TreePage.init();
+</script>
+{% endblock %}

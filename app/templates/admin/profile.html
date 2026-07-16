@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Profil Saya{% endblock %}
+{% block page_title %}Profil Saya{% endblock %}
+{% block page_subtitle %}Kelola informasi akun dan keamanan{% endblock %}
+
+{% block content %}
+<div class="grid-2">
+
+  <!-- Profile Info -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="ri-user-line"></i> Informasi Akun</div>
+    </div>
+    <form id="profile-form" onsubmit="event.preventDefault(); ProfilePage.saveProfile();">
+      <div class="form-group">
+        <label class="form-label">Username</label>
+        <input type="text" class="form-control" value="{{ current_user.username }}" disabled>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Username tidak dapat diubah</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Role</label>
+        <input type="text" class="form-control" value="{{ current_user.role.name if current_user.role else '-' }}" disabled>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="prof-name">Nama Lengkap</label>
+        <input id="prof-name" type="text" class="form-control" value="{{ current_user.full_name or '' }}" placeholder="Nama lengkap">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="prof-email">Email</label>
+        <input id="prof-email" type="email" class="form-control" value="{{ current_user.email }}" placeholder="email@domain.com" required>
+      </div>
+      <button type="submit" class="btn btn-primary"><i class="ri-save-line"></i> Simpan Perubahan</button>
+    </form>
+  </div>
+
+  <!-- Change Password -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="ri-lock-password-line"></i> Ganti Password</div>
+    </div>
+    <form id="password-form" onsubmit="event.preventDefault(); ProfilePage.changePassword();">
+      <div class="form-group">
+        <label class="form-label" for="pw-current">Password Saat Ini <span style="color:var(--danger)">*</span></label>
+        <input id="pw-current" type="password" class="form-control" placeholder="Masukkan password saat ini" required>
+        <span class="toggle-password" data-target="pw-current">
+          <i class="ri-eye-line"></i>
+      </span>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="pw-new">Password Baru <span style="color:var(--danger)">*</span></label>
+        <input id="pw-new" type="password" class="form-control" placeholder="Masukkan password baru (min. 6 karakter)" required>
+        <span class="toggle-password" data-target="pw-new">
+          <i class="ri-eye-line"></i>
+      </span>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="pw-confirm">Konfirmasi Password Baru <span style="color:var(--danger)">*</span></label>
+        <input id="pw-confirm" type="password" class="form-control" placeholder="Ulangi password baru" required>
+        <span class="toggle-password" data-target="pw-confirm">
+          <i class="ri-eye-line"></i>
+      </span>
+      </div>
+      <button type="submit" class="btn btn-primary"><i class="ri-lock-password-line"></i> Update Password</button>
+    </form>
+  </div>
+
+</div>
+{% endblock %}

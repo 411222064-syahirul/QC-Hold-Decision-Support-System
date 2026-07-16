@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Tipe Defect{% endblock %}
+{% block page_title %}Tipe Defect{% endblock %}
+{% block page_subtitle %}Kelola daftar tipe defect spesifik produk{% endblock %}
+
+{% block topbar_actions %}
+<button class="btn btn-primary" onclick="TypePage.openCreate()"><i class="ri-add-line"></i> Tambah Tipe</button>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    <div>
+      <div class="card-title"><i class="ri-search-eye-line"></i> Daftar Tipe Defect</div>
+      <div class="card-subtitle">Jenis cacat spesifik pada produk</div>
+    </div>
+  </div>
+
+  <div class="table-toolbar">
+    <select id="filter-cat" class="form-control" style="max-width:250px;" onchange="TypePage.filterByCat(this.value)">
+      <option value="">Semua Kategori</option>
+    </select>
+  </div>
+
+  <div class="table-wrap">
+    <table id="type-table">
+      <thead>
+        <tr>
+          <th>Nama Tipe</th>
+          <th>Kategori</th>
+          <th>Deskripsi</th>
+          <th>Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="4" class="table-empty"><div class="spinner"></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal Tipe -->
+<div class="modal-overlay" id="type-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="type-modal-title">Tambah Tipe Defect</div>
+      <button class="btn-icon" onclick="Modal.close('type-modal')"><i class="ri-close-line"></i></button>
+    </div>
+    <div class="modal-body">
+      <form id="type-form" onsubmit="event.preventDefault(); TypePage.save();">
+        <div class="form-group">
+          <label class="form-label" for="type-cat">Kategori <span style="color:var(--danger)">*</span></label>
+          <select id="type-cat" class="form-control" required>
+            <option value="">-- Pilih Kategori --</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="type-name">Nama Tipe <span style="color:var(--danger)">*</span></label>
+          <input id="type-name" type="text" class="form-control" placeholder="Contoh: Baret Halus" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="type-desc">Deskripsi</label>
+          <textarea id="type-desc" class="form-control" rows="3" placeholder="Penjelasan singkat..."></textarea>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="Modal.close('type-modal')">Batal</button>
+      <button class="btn btn-primary" onclick="TypePage.save()"><i class="ri-save-line"></i> Simpan</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>TypePage.load();</script>
+{% endblock %}

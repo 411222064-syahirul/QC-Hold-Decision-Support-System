@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Kategori Produk{% endblock %}
+{% block page_title %}Kategori Produk{% endblock %}
+{% block page_subtitle %}Kelola kategori produk / lini produksi{% endblock %}
+
+{% block topbar_actions %}
+<button class="btn btn-primary" onclick="ProductCatPage.openCreate()"><i class="ri-add-line"></i> Tambah Kategori</button>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    <div>
+      <div class="card-title"><i class="ri-folder-line"></i> Daftar Kategori Produk</div>
+      <div class="card-subtitle">Pengelompokan jenis-jenis produk</div>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table id="product-cat-table">
+      <thead>
+        <tr>
+          <th>Nama Kategori Produk</th>
+          <th>Deskripsi</th>
+          <th>Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="3" class="table-empty"><div class="spinner"></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal Kategori Produk -->
+<div class="modal-overlay" id="product-cat-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="product-cat-modal-title">Tambah Kategori Produk</div>
+      <button class="btn-icon" onclick="Modal.close('product-cat-modal')"><i class="ri-close-line"></i></button>
+    </div>
+    <div class="modal-body">
+      <form id="product-cat-form" onsubmit="event.preventDefault(); ProductCatPage.save();">
+        <input type="hidden" id="product-cat-id">
+        <div class="form-group">
+          <label class="form-label" for="product-cat-name">Nama Kategori Produk <span style="color:var(--danger)">*</span></label>
+          <input id="product-cat-name" type="text" class="form-control" placeholder="Contoh: Body Part" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="product-cat-desc">Deskripsi</label>
+          <textarea id="product-cat-desc" class="form-control" rows="3" placeholder="Penjelasan singkat..."></textarea>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="Modal.close('product-cat-modal')">Batal</button>
+      <button class="btn btn-primary" onclick="ProductCatPage.save()"><i class="ri-save-line"></i> Simpan</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>ProductCatPage.load();</script>
+{% endblock %}

@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Dataset Testing{% endblock %}
+{% block page_title %}Dataset Testing{% endblock %}
+{% block page_subtitle %}Kelola dataset untuk menguji performa model C4.5{% endblock %}
+
+{% block topbar_actions %}
+<button class="btn btn-primary" onclick="DatasetPage.openCreate()"><i class="ri-add-line"></i> Buat Dataset</button>
+{% endblock %}
+
+{% block content %}
+
+<div class="card">
+  <div class="card-header">
+    <div>
+      <div class="card-title"><i class="ri-test-tube-line"></i> Daftar Dataset Testing</div>
+      <div class="card-subtitle">Dataset yang digunakan untuk validasi model</div>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table id="dataset-table">
+      <thead>
+        <tr>
+          <th>Nama Dataset</th>
+          <th>Deskripsi</th>
+          <th>Jumlah Record</th>
+          <th>Dibuat</th>
+          <th>Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="5" class="table-empty"><div class="spinner"></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal Create Dataset -->
+<div class="modal-overlay" id="dataset-modal">
+  <div class="modal" style="max-width:440px;">
+    <div class="modal-header">
+      <div class="modal-title" id="dataset-modal-title">Buat Dataset Testing</div>
+      <button class="btn-icon" onclick="Modal.close('dataset-modal')"><i class="ri-close-line"></i></button>
+    </div>
+    <div class="modal-body">
+      <form id="dataset-form" onsubmit="event.preventDefault(); DatasetPage.save();">
+        <div class="form-group">
+          <label class="form-label" for="ds-name">Nama Dataset <span style="color:var(--danger)">*</span></label>
+          <input id="ds-name" type="text" class="form-control" placeholder="Contoh: Testing Set v1" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="ds-desc">Deskripsi</label>
+          <textarea id="ds-desc" class="form-control" rows="3" placeholder="Deskripsi dataset..."></textarea>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="Modal.close('dataset-modal')">Batal</button>
+      <button class="btn btn-primary" onclick="DatasetPage.save()"><i class="ri-save-line"></i> Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal View Records -->
+<div class="modal-overlay" id="records-modal">
+  <div class="modal" style="max-width:800px;">
+    <div class="modal-header">
+      <div class="modal-title" id="records-modal-title">Records Dataset</div>
+      <button class="btn-icon" onclick="Modal.close('records-modal')"><i class="ri-close-line"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="table-toolbar">
+        <button class="btn btn-primary btn-sm" onclick="DatasetPage.openAddRecords()"><i class="ri-add-line"></i> Tambah Record</button>
+      </div>
+      <div class="table-wrap" style="max-height:400px;overflow-y:auto;">
+        <table id="records-table">
+          <thead><tr><th>QC Code</th><th>Produk</th><th>Defect</th><th>Keputusan</th><th>Aksi</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Add Records -->
+<div class="modal-overlay" id="add-records-modal">
+  <div class="modal" style="max-width:700px;">
+    <div class="modal-header">
+      <div class="modal-title"><i class="ri-add-box-line"></i> Tambah Record ke Dataset</div>
+      <button class="btn-icon" onclick="Modal.close('add-records-modal')"><i class="ri-close-line"></i></button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">Pilih data QC Hold yang ingin ditambahkan ke dataset ini.</div>
+      <div class="table-wrap" style="max-height:400px;overflow-y:auto;">
+        <table id="available-table">
+          <thead><tr><th><input type="checkbox" id="select-all-records"></th><th>QC Code</th><th>Produk</th><th>Defect</th><th>Keputusan</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="Modal.close('add-records-modal')">Batal</button>
+      <button class="btn btn-primary" onclick="DatasetPage.addSelectedRecords()"><i class="ri-add-line"></i> Tambahkan Terpilih</button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>DatasetPage.init('TEST');</script>
+{% endblock %}
