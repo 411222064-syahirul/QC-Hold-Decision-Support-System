@@ -1,19 +1,86 @@
-{% extends "base.html" %}
-{% block title %}Dataset Testing{% endblock %}
-{% block page_title %}Dataset Testing{% endblock %}
-{% block page_subtitle %}Kelola dataset untuk menguji performa model C4.5{% endblock %}
+{% extends "base.html" %} {% block title %}Dataset Testing & Evaluasi Model{%
+endblock %} {% block page_title %}Dataset Testing & Uji Model C4.5{% endblock %}
+{% block page_subtitle %}Kelola data uji untuk mengukur kualitas model, uji
+generalisasi, dan deteksi overfitting{% endblock %} {% block topbar_actions %}
+<div class="d-flex gap-1">
+  <button class="btn btn-secondary" onclick="DatasetPage.openGenerateTest()">
+    <i class="ri-magic-line"></i> Auto-Generate Test Set
+  </button>
+  <button class="btn btn-primary" onclick="DatasetPage.openCreate()">
+    <i class="ri-add-line"></i> Buat Dataset Testing
+  </button>
+</div>
+{% endblock %} {% block content %}
 
-{% block topbar_actions %}
-<button class="btn btn-primary" onclick="DatasetPage.openCreate()"><i class="ri-add-line"></i> Buat Dataset</button>
-{% endblock %}
+<!-- Info & Model Target Selector Card -->
+<div
+  class="card mb-2"
+  style="
+    background: linear-gradient(
+      135deg,
+      rgba(47, 129, 247, 0.12),
+      rgba(63, 185, 80, 0.08)
+    );
+    border: 1px solid rgba(47, 129, 247, 0.22);
+  "
+>
+  <div
+    style="
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 16px 20px;
+    "
+  >
+    <div
+      style="
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        flex: 1;
+        min-width: 280px;
+      "
+    ></div>
 
-{% block content %}
+    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap">
+      <label
+        for="eval-model-select"
+        style="
+          font-size: 12px;
+          font-weight: 600;
+          color: var(--text-secondary);
+          white-space: nowrap;
+        "
+      >
+        <i class="ri-robot-2-line"></i> Model yang Diuji:
+      </label>
+      <select
+        id="eval-model-select"
+        class="form-control"
+        style="min-width: 240px; padding: 7px 12px; font-size: 13px"
+      >
+        {% for m in models %}
+        <option value="{{ m.id }}" {% if m.is_active %}selected{% endif %}>
+          {{ m.name }} (v{{ m.version or '1.0' }}){% if m.is_active %} —
+          [AKTIF]{% endif %}
+        </option>
+        {% else %}
+        <option value="">-- Belum ada model C4.5 --</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+</div>
 
-<div class="card">
+<!-- Daftar Dataset Testing -->
+<div class="card mb-2">
   <div class="card-header">
     <div>
-      <div class="card-title"><i class="ri-test-tube-line"></i> Daftar Dataset Testing</div>
-      <div class="card-subtitle">Dataset yang digunakan untuk validasi model</div>
+      <div class="card-title">
+        <i class="ri-database-2-line"></i> Daftar Dataset Testing
+      </div>
     </div>
   </div>
 
@@ -24,57 +91,511 @@
           <th>Nama Dataset</th>
           <th>Deskripsi</th>
           <th>Jumlah Record</th>
+          <th>Status Kemurnian Data (Unseen)</th>
           <th>Dibuat</th>
           <th>Aksi</th>
         </tr>
       </thead>
       <tbody>
-        <tr><td colspan="5" class="table-empty"><div class="spinner"></div></td></tr>
+        <tr>
+          <td colspan="6" class="table-empty"><div class="spinner"></div></td>
+        </tr>
       </tbody>
     </table>
   </div>
 </div>
 
+<!-- =========================================================================
+     PANEL HASIL EVALUASI: KUALITAS MODEL, UJI GENERALISASI & OVERFITTING
+     ========================================================================= -->
+<div id="evaluation-result-panel" style="display: none">
+  <!-- Header Hasil Evaluasi -->
+  <div class="card mb-2" style="border-top: 3px solid var(--accent)">
+    <div
+      class="card-header"
+      style="
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+      "
+    >
+      <div>
+        <div class="card-title" style="font-size: 16px">
+          <i class="ri-Line-chart-line"></i>Laporan Hasil Pengujian
+        </div>
+      </div>
+      <div class="d-flex gap-1">
+        <button
+          class="btn btn-sm btn-secondary"
+          onclick="DatasetPage.reEvaluateCurrent()"
+        >
+          <i class="ri-refresh-line"></i> Uji Ulang dengan Model Terpilih
+        </button>
+        <button
+          class="btn btn-sm btn-secondary"
+          onclick="
+            document.getElementById('evaluation-result-panel').style.display =
+              'none'
+          "
+        >
+          <i class="ri-close-line"></i> Tutup Hasil
+        </button>
+      </div>
+    </div>
+
+    <!-- 6 KPI Cards -->
+    <div style="padding: 20px">
+      <div
+        class="stats-grid"
+        id="eval-kpi-grid"
+        style="
+          grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+          gap: 14px;
+        "
+      ></div>
+    </div>
+  </div>
+
+  <!-- Row Grafik: Perbandingan Train vs Test (Overfitting) & Confusion Matrix -->
+  <div class="grid-2 mb-2">
+    <!-- Card 1: Deteksi Overfitting (Train vs Test Chart & Gap Table) -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">
+            <i class="ri-scales-3-line"></i> Deteksi Overfitting: Training vs
+            Testing
+          </div>
+          <div class="card-subtitle">
+            Perbandingan metrik pada data latih vs data uji untuk melihat
+            penyimpangan (Generalization Gap)
+          </div>
+        </div>
+      </div>
+      <div style="padding: 16px 20px">
+        <div class="chart-container" style="height: 240px; margin-bottom: 16px">
+          <canvas id="eval-overfit-chart"></canvas>
+        </div>
+        <div class="table-wrap">
+          <table id="eval-gap-table">
+            <thead>
+              <tr>
+                <th>Metrik</th>
+                <th>Training</th>
+                <th>Testing</th>
+                <th>Gap (Train - Test)</th>
+                <th>Indikasi</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 2: Confusion Matrix & Komposisi Kompleksitas Pohon -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">
+            <i class="ri-grid-line"></i> Confusion Matrix &amp; Struktur Pohon
+          </div>
+          <div class="card-subtitle">
+            Matriks kebingungan (Aktual vs Prediksi) dan bobot pengaruh fitur
+            (Information Gain)
+          </div>
+        </div>
+      </div>
+      <div style="padding: 16px 20px">
+        <div
+          id="eval-confusion-matrix-wrap"
+          style="overflow-x: auto; margin-bottom: 18px"
+        ></div>
+        <div id="eval-tree-complexity-wrap"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Per-Class Performance Breakdown -->
+  <div class="card mb-2">
+    <div class="card-header">
+      <div>
+        <div class="card-title">
+          <i class="ri-bar-chart-grouped-line"></i> Kualitas Model per Kelas
+          Keputusan (Per-Class Metrics)
+        </div>
+        <div class="card-subtitle">
+          Detail Precision, Recall, F1-Score, dan jumlah dukungan sampel
+          (Support) untuk setiap tindakan keputusan
+        </div>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table id="eval-class-table">
+        <thead>
+          <tr>
+            <th>Kelas Keputusan (Action)</th>
+            <th>Support (Aktual)</th>
+            <th>Jumlah Diprediksi</th>
+            <th>Prediksi Benar (TP)</th>
+            <th>Precision</th>
+            <th>Recall (Sensitivitas)</th>
+            <th>F1-Score</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Detail Prediksi Record demi Record -->
+  <div class="card mb-2">
+    <div
+      class="card-header"
+      style="
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+      "
+    >
+      <div>
+        <div class="card-title">
+          <i class="ri-file-list-3-line"></i> Rincian Uji Generalisasi per
+          Record (Aktual vs Prediksi)
+        </div>
+        <div class="card-subtitle">
+          Verifikasi ketepatan prediksi model C4.5 pada setiap sampel di Dataset
+          Testing
+        </div>
+      </div>
+      <div class="d-flex gap-1" id="eval-detail-filters">
+        <button
+          class="btn btn-sm btn-primary"
+          data-filter="ALL"
+          onclick="DatasetPage.filterPredictions('ALL')"
+        >
+          Semua
+        </button>
+        <button
+          class="btn btn-sm btn-secondary"
+          data-filter="WRONG"
+          onclick="DatasetPage.filterPredictions('WRONG')"
+        >
+          Hanya Mismatch / Salah
+        </button>
+        <button
+          class="btn btn-sm btn-secondary"
+          data-filter="CORRECT"
+          onclick="DatasetPage.filterPredictions('CORRECT')"
+        >
+          Hanya Benar
+        </button>
+        <button
+          class="btn btn-sm btn-secondary"
+          data-filter="UNSEEN"
+          onclick="DatasetPage.filterPredictions('UNSEEN')"
+        >
+          Murni Unseen Data
+        </button>
+      </div>
+    </div>
+    <div class="table-wrap" style="max-height: 440px; overflow-y: auto">
+      <table id="eval-details-table">
+        <thead>
+          <tr>
+            <th>QC Code</th>
+            <th>Kategori Produk</th>
+            <th>Kategori Defect</th>
+            <th>Severity</th>
+            <th>Tipe Sampel</th>
+            <th>Keputusan Aktual</th>
+            <th>Prediksi Model</th>
+            <th>Confidence</th>
+            <th>Hasil Uji</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- =========================================================================
+     MODALS
+     ========================================================================= -->
+
 <!-- Modal Create Dataset -->
 <div class="modal-overlay" id="dataset-modal">
-  <div class="modal" style="max-width:440px;">
+  <div class="modal" style="max-width: 440px">
     <div class="modal-header">
-      <div class="modal-title" id="dataset-modal-title">Buat Dataset Testing</div>
-      <button class="btn-icon" onclick="Modal.close('dataset-modal')"><i class="ri-close-line"></i></button>
+      <div class="modal-title" id="dataset-modal-title">
+        Buat Dataset Testing
+      </div>
+      <button class="btn-icon" onclick="Modal.close('dataset-modal')">
+        <i class="ri-close-line"></i>
+      </button>
     </div>
     <div class="modal-body">
-      <form id="dataset-form" onsubmit="event.preventDefault(); DatasetPage.save();">
+      <form
+        id="dataset-form"
+        onsubmit="
+          event.preventDefault();
+          DatasetPage.save();
+        "
+      >
         <div class="form-group">
-          <label class="form-label" for="ds-name">Nama Dataset <span style="color:var(--danger)">*</span></label>
-          <input id="ds-name" type="text" class="form-control" placeholder="Contoh: Testing Set v1" required>
+          <label class="form-label" for="ds-name"
+            >Nama Dataset <span style="color: var(--danger)">*</span></label
+          >
+          <input
+            id="ds-name"
+            type="text"
+            class="form-control"
+            placeholder="Contoh: Testing Set Holdout Q4"
+            required
+          />
         </div>
         <div class="form-group">
           <label class="form-label" for="ds-desc">Deskripsi</label>
-          <textarea id="ds-desc" class="form-control" rows="3" placeholder="Deskripsi dataset..."></textarea>
+          <textarea
+            id="ds-desc"
+            class="form-control"
+            rows="3"
+            placeholder="Deskripsi tujuan pengujian dataset..."
+          ></textarea>
         </div>
       </form>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="Modal.close('dataset-modal')">Batal</button>
-      <button class="btn btn-primary" onclick="DatasetPage.save()"><i class="ri-save-line"></i> Simpan</button>
+      <button class="btn btn-secondary" onclick="Modal.close('dataset-modal')">
+        Batal
+      </button>
+      <button class="btn btn-primary" onclick="DatasetPage.save()">
+        <i class="ri-save-line"></i> Simpan
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Auto-Generate Test Set (Unseen / Stratified Split) -->
+<div class="modal-overlay" id="generate-test-modal">
+  <div class="modal" style="max-width: 520px">
+    <div class="modal-header">
+      <div class="modal-title">
+        <i class="ri-magic-line"></i> Auto-Generate Dataset Testing
+      </div>
+      <button class="btn-icon" onclick="Modal.close('generate-test-modal')">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div
+        style="
+          font-size: 12px;
+          color: var(--text-secondary);
+          margin-bottom: 14px;
+          line-height: 1.5;
+        "
+      >
+        Buat Dataset Testing secara otomatis yang bebas
+        <em>Data Leakage</em> untuk menguji kemampuan generalisasi model C4.5
+        secara objektif.
+      </div>
+      <form
+        id="generate-test-form"
+        onsubmit="
+          event.preventDefault();
+          DatasetPage.submitGenerateTest();
+        "
+      >
+        <div class="form-group">
+          <label class="form-label" for="gen-ds-name"
+            >Nama Dataset Testing Baru
+            <span style="color: var(--danger)">*</span></label
+          >
+          <input
+            id="gen-ds-name"
+            type="text"
+            class="form-control"
+            placeholder="Contoh: Unseen Holdout Test Set"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="gen-ds-mode"
+            >Metode Pembuatan Sampel Uji</label
+          >
+          <select
+            id="gen-ds-mode"
+            class="form-control"
+            onchange="DatasetPage.onGenerateModeChange()"
+          >
+            <option value="unseen">
+              1. Ambil Data Murni Unseen (Di Luar Dataset Training)
+            </option>
+            <option value="split">
+              2. Stratified Split (Bagi Proporsi dari Dataset Training)
+            </option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="gen-source-train"
+            >Acuan Dataset Training</label
+          >
+          <select id="gen-source-train" class="form-control">
+            <option value="">
+              -- Gunakan Dataset dari Model C4.5 Aktif --
+            </option>
+            {% for tds in train_datasets %}
+            <option value="{{ tds.id }}">
+              {{ tds.name }} ({{ tds.record_count }} records)
+            </option>
+            {% endfor %}
+          </select>
+          <div
+            class="text-small text-muted"
+            style="margin-top: 4px"
+            id="gen-mode-help"
+          >
+            Mengambil data QC Hold berlabel keputusan yang belum pernah masuk ke
+            Dataset Training acuan (0% overlap).
+          </div>
+        </div>
+
+        <div
+          id="gen-split-options"
+          style="
+            display: none;
+            background: var(--bg-elevated);
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            margin-bottom: 12px;
+          "
+        >
+          <div class="form-group" style="margin-bottom: 10px">
+            <label class="form-label" for="gen-split-ratio"
+              >Proporsi Data Testing (Split Ratio)</label
+            >
+            <select id="gen-split-ratio" class="form-control">
+              <option value="0.2">
+                20% Testing / 80% Training (Standar Pareto)
+              </option>
+              <option value="0.25" selected>25% Testing / 75% Training</option>
+              <option value="0.3">30% Testing / 70% Training</option>
+            </select>
+          </div>
+          <label
+            style="
+              display: flex;
+              align-items: flex-start;
+              gap: 8px;
+              font-size: 12px;
+              cursor: pointer;
+              color: var(--text-primary);
+            "
+          >
+            <input
+              type="checkbox"
+              id="gen-remove-train"
+              checked
+              style="margin-top: 2px"
+            />
+            <span
+              >Keluarkan sampel testing yang terpilih dari Dataset Training asal
+              agar <strong>bebas Data Leakage (100% Unseen)</strong> saat Anda
+              melatih ulang model.</span
+            >
+          </label>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="gen-ds-desc"
+            >Deskripsi (Opsional)</label
+          >
+          <input
+            id="gen-ds-desc"
+            type="text"
+            class="form-control"
+            placeholder="Otomatis diisi jika dikosongkan"
+          />
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button
+        class="btn btn-secondary"
+        onclick="Modal.close('generate-test-modal')"
+      >
+        Batal
+      </button>
+      <button
+        class="btn btn-primary"
+        id="btn-submit-generate"
+        onclick="DatasetPage.submitGenerateTest()"
+      >
+        <i class="ri-magic-line"></i> Buat Dataset Testing
+      </button>
     </div>
   </div>
 </div>
 
 <!-- Modal View Records -->
 <div class="modal-overlay" id="records-modal">
-  <div class="modal" style="max-width:800px;">
+  <div class="modal" style="max-width: 860px">
     <div class="modal-header">
       <div class="modal-title" id="records-modal-title">Records Dataset</div>
-      <button class="btn-icon" onclick="Modal.close('records-modal')"><i class="ri-close-line"></i></button>
+      <button class="btn-icon" onclick="Modal.close('records-modal')">
+        <i class="ri-close-line"></i>
+      </button>
     </div>
     <div class="modal-body">
-      <div class="table-toolbar">
-        <button class="btn btn-primary btn-sm" onclick="DatasetPage.openAddRecords()"><i class="ri-add-line"></i> Tambah Record</button>
+      <div
+        class="table-toolbar"
+        style="
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-bottom: 12px;
+        "
+      >
+        <div class="d-flex gap-1">
+          <button
+            class="btn btn-primary btn-sm"
+            onclick="DatasetPage.openAddRecords()"
+          >
+            <i class="ri-add-line"></i> Tambah Record Manual
+          </button>
+          <button
+            class="btn btn-secondary btn-sm"
+            onclick="DatasetPage.openUpload()"
+          >
+            <i class="ri-upload-line"></i> Upload Excel/CSV
+          </button>
+        </div>
+        <div id="records-modal-summary" class="text-small text-muted"></div>
       </div>
-      <div class="table-wrap" style="max-height:400px;overflow-y:auto;">
+      <div class="table-wrap" style="max-height: 420px; overflow-y: auto">
         <table id="records-table">
-          <thead><tr><th>QC Code</th><th>Produk</th><th>Defect</th><th>Keputusan</th><th>Aksi</th></tr></thead>
+          <thead>
+            <tr>
+              <th>QC Code</th>
+              <th>Produk</th>
+              <th>Defect</th>
+              <th>Severity</th>
+              <th>Keputusan Aktual</th>
+              <th>Status Unseen</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
           <tbody></tbody>
         </table>
       </div>
@@ -84,29 +605,135 @@
 
 <!-- Modal Add Records -->
 <div class="modal-overlay" id="add-records-modal">
-  <div class="modal" style="max-width:700px;">
+  <div class="modal" style="max-width: 780px">
     <div class="modal-header">
-      <div class="modal-title"><i class="ri-add-box-line"></i> Tambah Record ke Dataset</div>
-      <button class="btn-icon" onclick="Modal.close('add-records-modal')"><i class="ri-close-line"></i></button>
+      <div class="modal-title">
+        <i class="ri-add-box-line"></i> Tambah Record ke Dataset Testing
+      </div>
+      <button class="btn-icon" onclick="Modal.close('add-records-modal')">
+        <i class="ri-close-line"></i>
+      </button>
     </div>
     <div class="modal-body">
-      <div style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">Pilih data QC Hold yang ingin ditambahkan ke dataset ini.</div>
-      <div class="table-wrap" style="max-height:400px;overflow-y:auto;">
+      <div
+        style="
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-bottom: 12px;
+        "
+      >
+        <div style="font-size: 12px; color: var(--text-secondary)">
+          Pilih data QC Hold berlabel keputusan. Utamakan data berstatus
+          <strong>Unseen</strong> agar pengujian generalisasi bebas bias.
+        </div>
+        <label
+          style="
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            color: var(--accent);
+          "
+        >
+          <input
+            type="checkbox"
+            id="filter-unseen-only"
+            onchange="DatasetPage.renderAvailableRecords()"
+          />
+          <strong>Hanya tampilkan Unseen Data</strong>
+        </label>
+      </div>
+      <div class="table-wrap" style="max-height: 380px; overflow-y: auto">
         <table id="available-table">
-          <thead><tr><th><input type="checkbox" id="select-all-records"></th><th>QC Code</th><th>Produk</th><th>Defect</th><th>Keputusan</th></tr></thead>
+          <thead>
+            <tr>
+              <th><input type="checkbox" id="select-all-records" /></th>
+              <th>QC Code</th>
+              <th>Produk</th>
+              <th>Defect</th>
+              <th>Severity</th>
+              <th>Keputusan</th>
+              <th>Status Data</th>
+            </tr>
+          </thead>
           <tbody></tbody>
         </table>
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="Modal.close('add-records-modal')">Batal</button>
-      <button class="btn btn-primary" onclick="DatasetPage.addSelectedRecords()"><i class="ri-add-line"></i> Tambahkan Terpilih</button>
+      <button
+        class="btn btn-secondary"
+        onclick="Modal.close('add-records-modal')"
+      >
+        Batal
+      </button>
+      <button
+        class="btn btn-primary"
+        onclick="DatasetPage.addSelectedRecords()"
+      >
+        <i class="ri-add-line"></i> Tambahkan Terpilih
+      </button>
     </div>
   </div>
 </div>
 
-{% endblock %}
+<!-- Modal Upload Dataset -->
+<div class="modal-overlay" id="upload-modal">
+  <div class="modal" style="max-width: 440px">
+    <div class="modal-header">
+      <div class="modal-title">
+        <i class="ri-upload-cloud-line"></i> Upload File Dataset Testing
+      </div>
+      <button class="btn-icon" onclick="Modal.close('upload-modal')">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div
+        style="
+          font-size: 12px;
+          color: var(--text-secondary);
+          margin-bottom: 12px;
+          line-height: 1.5;
+        "
+      >
+        Unggah file dataset pengujian eksternal (format <code>.csv</code> atau
+        <code>.xlsx</code>) yang memiliki kolom Kategori Produk, Jenis
+        Masalah/Defect, Severity, dan Keputusan/Tindakan.
+      </div>
+      <form
+        id="upload-form"
+        onsubmit="
+          event.preventDefault();
+          DatasetPage.uploadFile();
+        "
+      >
+        <input
+          type="file"
+          id="upload-file"
+          accept=".csv, .xls, .xlsx"
+          class="form-control"
+          required
+        />
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="Modal.close('upload-modal')">
+        Batal
+      </button>
+      <button class="btn btn-primary" onclick="DatasetPage.uploadFile()">
+        <i class="ri-upload-line"></i> Upload Sekarang
+      </button>
+    </div>
+  </div>
+</div>
 
-{% block scripts %}
-<script>DatasetPage.init('TEST');</script>
+{% endblock %} {% block scripts %}
+<script>
+  DatasetPage.init("TEST");
+</script>
 {% endblock %}

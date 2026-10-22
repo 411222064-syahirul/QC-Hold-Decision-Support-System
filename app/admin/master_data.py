@@ -81,53 +81,37 @@ def delete_defect_category(cid):
 
 # ── API: Decision Action ───────────────────────────────────────────────────
 
+LOCKED_DECISION_CODES = ('REWORK', 'DISPOSISI', 'DISPOSAL')
+
+
 @bp.route('/api/decision-actions', methods=['GET'])
 @login_required
 def list_decision_actions():
-    return jsonify([a.to_dict() for a in DecisionAction.query.all()])
+    actions = DecisionAction.query.filter(DecisionAction.code.in_(LOCKED_DECISION_CODES)).all()
+    order_map = {'REWORK': 1, 'DISPOSISI': 2, 'DISPOSAL': 3}
+    actions.sort(key=lambda a: order_map.get(a.code.upper(), 99))
+    return jsonify([a.to_dict() for a in actions])
 
 
 @bp.route('/api/decision-actions', methods=['POST'])
 @login_required
-@require_role('admin')
 def create_decision_action():
-    d = request.json
-    if DecisionAction.query.filter_by(code=d['code'].upper()).first():
-        return jsonify({'error': 'Kode sudah digunakan'}), 409
-    a = DecisionAction(code=d['code'].upper(), label=d['label'], description=d.get('description'))
-    db.session.add(a)
-    db.session.commit()
-    log_audit('CREATE', 'decision_action', a.id, {'code': a.code})
-    return jsonify(a.to_dict()), 201
+    return jsonify({'error': 'Decision Action dikunci (hanya REWORK, DISPOSISI, DISPOSAL). Tidak dapat menambah data.'}), 403
 
 
 @bp.route('/api/decision-actions/<int:aid>', methods=['PUT'])
 @login_required
-@require_role('admin')
 def update_decision_action(aid):
-    a = DecisionAction.query.get_or_404(aid)
-    d = request.json
-    a.code = d.get('code', a.code).upper()
-    a.label = d.get('label', a.label)
-    a.description = d.get('description', a.description)
-    db.session.commit()
-    log_audit('UPDATE', 'decision_action', aid, {'code': a.code})
-    return jsonify(a.to_dict())
+    return jsonify({'error': 'Decision Action dikunci (hanya REWORK, DISPOSISI, DISPOSAL). Tidak dapat mengubah data.'}), 403
 
 
 @bp.route('/api/decision-actions/<int:aid>', methods=['DELETE'])
 @login_required
-@require_role('admin')
 def delete_decision_action(aid):
-    a = DecisionAction.query.get_or_404(aid)
-    code = a.code
-    db.session.delete(a)
-    db.session.commit()
-    log_audit('DELETE', 'decision_action', aid, {'code': code})
-    return jsonify({'ok': True})
+    return jsonify({'error': 'Decision Action dikunci (hanya REWORK, DISPOSISI, DISPOSAL). Tidak dapat menghapus data.'}), 403
 
 
-# ── API: Product Categories ───────────────────────────────────────────────────
+# ?? API: Product Categories ???????????????????????????????????????????????????
 @bp.route('/api/product-categories', methods=['GET'])
 @login_required
 def get_product_categories():

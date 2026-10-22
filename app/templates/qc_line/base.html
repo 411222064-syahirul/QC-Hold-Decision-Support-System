@@ -6,7 +6,7 @@
   <title>{% block title %}QC Line{% endblock %} — QC Hold DSS</title>
   <meta name="description" content="Portal Operator QC Line — Sistem QC Hold DSS">
   <link href="https://cdn.jsdelivr.net/npm/remixicon@4.6.0/fonts/remixicon.css" rel="stylesheet">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=2.7">
   {% if current_user.is_authenticated %}<meta name="user-role" content="qc_line">{% endif %}
   {% block head %}{% endblock %}
 </head>
@@ -118,7 +118,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
-<script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+<script src="{{ url_for('static', filename='js/admin.js') }}?v=2.7"></script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

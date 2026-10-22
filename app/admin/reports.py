@@ -88,6 +88,10 @@ def get_monthly_report():
     
     records_data = []
     for r in records:
+        dec_status = r.decision_status or (
+            ('NO' if ('DISPOSAL' in r.decision_action.code.upper() or 'SCRAP' in r.decision_action.code.upper()) else 'YES')
+            if r.decision_action else '-'
+        )
         records_data.append({
             'qc_code': r.qc_code,
             'inspection_date': str(r.inspection_date),
@@ -95,7 +99,8 @@ def get_monthly_report():
             'defect_category': r.defect_category.name if r.defect_category else '-',
             'qty_total': r.qty_total,
             'qty_ng': r.qty_ng,
-            'decision': r.decision_action.code if r.decision_action else '-'
+            'decision': r.decision_action.code if r.decision_action else '-',
+            'decision_status': dec_status,
         })
     
     return jsonify({
@@ -129,6 +134,10 @@ def export_excel():
     
     data = []
     for r in records:
+        dec_status = r.decision_status or (
+            ('NO' if ('DISPOSAL' in r.decision_action.code.upper() or 'SCRAP' in r.decision_action.code.upper()) else 'YES')
+            if r.decision_action else ''
+        )
         data.append({
             'NO QC HOLD': r.qc_code,
             'TANGGAL': str(r.inspection_date),
@@ -138,6 +147,8 @@ def export_excel():
             'QTY TOTAL': r.qty_total,
             'QTY NG': r.qty_ng,
             'KEPUTUSAN': r.decision_action.label if r.decision_action else '',
+            'STATUS': dec_status,
+            'KONDISI': r.status or '',
             'KETERANGAN AWAL': r.defect_description or '',
             'CATATAN PERBAIKAN': r.notes if r.status != 'OPEN' and r.notes else '',
             'PEMBUAT': r.creator.full_name if r.creator and r.creator.full_name else (r.creator.username if r.creator else ''),
@@ -399,12 +410,16 @@ def export_pdf():
 
     col_headers = ['No', 'No QC Hold', 'Tanggal', 'Produk', 'Part No',
                    'Jenis Masalah', 'Severity', 'Qty Total', 'Qty NG',
-                   'Keputusan', 'Status', 'Keterangan']
+                   'Keputusan', 'Status', 'Kondisi', 'Keterangan']
     table_data = [[Paragraph(f'<b>{h}</b>', s_cell_bold) for h in col_headers]]
 
     severity_map = {1: 'Low', 2: 'Medium', 3: 'High'}
     for idx, r in enumerate(records, 1):
         insp_date_str = r.inspection_date.strftime('%d-%m-%Y') if r.inspection_date else '-'
+        dec_status = r.decision_status or (
+            ('NO' if ('DISPOSAL' in r.decision_action.code.upper() or 'SCRAP' in r.decision_action.code.upper()) else 'YES')
+            if r.decision_action else '-'
+        )
         table_data.append([
             Paragraph(str(idx), s_cell),
             Paragraph(r.qc_code or '-', s_cell),
@@ -416,6 +431,7 @@ def export_pdf():
             Paragraph(str(r.qty_total or 0), s_cell),
             Paragraph(str(r.qty_ng or 0), s_cell),
             Paragraph(r.decision_action.label if r.decision_action else '-', s_cell),
+            Paragraph(dec_status, s_cell),
             Paragraph(r.status or '-', s_cell),
             Paragraph(r.defect_description or '-', s_cell),
         ])
@@ -423,16 +439,17 @@ def export_pdf():
     # Column widths proportional
     detail_widths = [
         0.6 * cm,   # No
-        2.2 * cm,   # No QC Hold
-        1.8 * cm,   # Tanggal
-        2.2 * cm,   # Produk
-        1.8 * cm,   # Part No
-        2.5 * cm,   # Jenis Masalah
-        1.3 * cm,   # Severity
-        1.3 * cm,   # Qty Total
-        1.2 * cm,   # Qty NG
+        2.1 * cm,   # No QC Hold
+        1.7 * cm,   # Tanggal
+        2.1 * cm,   # Produk
+        1.7 * cm,   # Part No
+        2.3 * cm,   # Jenis Masalah
+        1.2 * cm,   # Severity
+        1.2 * cm,   # Qty Total
+        1.1 * cm,   # Qty NG
         1.8 * cm,   # Keputusan
-        1.2 * cm,   # Status
+        1.1 * cm,   # Status (YES/NO)
+        1.2 * cm,   # Kondisi (OPEN/CLOSE)
     ]
     used = sum(detail_widths)
     detail_widths.append(avail_w - used)  # Keterangan gets remaining space

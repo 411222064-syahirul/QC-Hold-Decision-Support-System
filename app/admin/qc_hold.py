@@ -43,10 +43,14 @@ def create_qc_hold():
     data = request.json
 
     status = 'OPEN'
+    decision_status = None
     if data.get('decision_action_id'):
         da = DecisionAction.query.get(data.get('decision_action_id'))
-        if da and ('DOWNGRADE' in da.code.upper() or 'DISPOSAL' in da.code.upper() or 'SCRAP' in da.code.upper()):
-            status = 'CLOSE'
+        if da:
+            is_disp = ('DISPOSAL' in da.code.upper() or 'SCRAP' in da.code.upper())
+            decision_status = 'NO' if is_disp else 'YES'
+            if 'DOWNGRADE' in da.code.upper() or is_disp:
+                status = 'CLOSE'
 
     # Generate qc_code safely against deletions
     today_str = datetime.now().strftime('%Y%m%d')
@@ -85,6 +89,7 @@ def create_qc_hold():
         qty_ng=qty_ng_val,
         qty_ok=(qty_tot - qty_ng_val),
         decision_action_id=data.get('decision_action_id'),
+        decision_status=decision_status,
         status=status,
         notes=data.get('notes'),
         operator_id=current_user.id,
@@ -129,16 +134,23 @@ def update_qc_hold(id):
         return jsonify({'error': 'QTY Defect (NG) tidak boleh lebih besar dari QTY Planning (Total).'}), 400
     qc.qty_ok = qc.qty_total - qc.qty_ng
     qc.decision_action_id = data.get('decision_action_id', qc.decision_action_id)
+    if qc.decision_action_id:
+        da = DecisionAction.query.get(qc.decision_action_id)
+        if da:
+            is_disp = ('DISPOSAL' in da.code.upper() or 'SCRAP' in da.code.upper())
+            qc.decision_status = 'NO' if is_disp else 'YES'
     qc.notes = data.get('notes', qc.notes)
 
     hasil = data.get('hasil_perbaikan')
     if hasil == 'OK':
         qc.status = 'CLOSE'
+        qc.decision_status = 'YES'
         qc.action_taken_by = current_user.id
         qc.action_taken_at = datetime.utcnow()
         qc.notes = "lanjut proses produksi" + (f"\n{qc.notes}" if qc.notes else "")
     elif hasil == 'NG':
         qc.status = 'CLOSE'
+        qc.decision_status = 'NO'
         qc.action_taken_by = current_user.id
         qc.action_taken_at = datetime.utcnow()
         disp = DecisionAction.query.filter(DecisionAction.code.like('%DISPOSAL%')).first()

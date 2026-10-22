@@ -10,6 +10,10 @@ def seed_admin():
     with app.app_context():
         db.create_all()
 
+        # Migrasi: pisahkan dataset (dataset_record) dari tabel qc_hold
+        from app.migrate import migrate_dataset_separation
+        migrate_dataset_separation(db, app.logger)
+
         # Seed roles
         default_roles = [
             ('admin', 'Administrator penuh'),

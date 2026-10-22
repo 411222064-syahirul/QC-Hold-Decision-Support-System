@@ -50,8 +50,37 @@ def dashboard():
     }
     
     recent_qc_holds = base_q.order_by(desc(QcHold.created_at)).limit(5).all()
+
+    # Defect category distribution (user's data)
+    defect_dist = db.session.query(
+        DefectCategory.name, func.count(QcHold.id)
+    ).join(QcHold, QcHold.defect_category_id == DefectCategory.id
+    ).filter(
+        QcHold.operator_id == current_user.id,
+        ~QcHold.qc_code.like('QC-IMP-%')
+    ).group_by(DefectCategory.name).all()
+    defect_distribution = [{'label': n, 'count': c} for n, c in defect_dist]
+
+    # Monthly NG trend (user's data, last 6 months)
+    from datetime import timedelta
+    six_months_ago = datetime.utcnow() - timedelta(days=180)
+    monthly_ng = db.session.query(
+        func.date_format(QcHold.inspection_date, '%Y-%m').label('month'),
+        func.coalesce(func.sum(QcHold.qty_ng), 0).label('total_ng')
+    ).filter(
+        QcHold.operator_id == current_user.id,
+        ~QcHold.qc_code.like('QC-IMP-%'),
+        QcHold.inspection_date >= six_months_ago
+    ).group_by('month').order_by('month').all()
+    monthly_data = [{'month': r.month, 'count': int(r.total_ng)} for r in monthly_ng]
     
-    return render_template('qc_line/dashboard.html', stats=stats, recent_qc_holds=recent_qc_holds)
+    return render_template(
+        'qc_line/dashboard.html',
+        stats=stats,
+        recent_qc_holds=recent_qc_holds,
+        defect_distribution=defect_distribution,
+        monthly_data=monthly_data,
+    )
 
 
 # ── Halaman QC Hold ────────────────────────────────────────────────────────────

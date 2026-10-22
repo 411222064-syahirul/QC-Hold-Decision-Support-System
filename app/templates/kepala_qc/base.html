@@ -6,7 +6,7 @@
   <title>{% block title %}Kepala QC{% endblock %} — QC Hold DSS</title>
   <meta name="description" content="Portal Kepala QC — Sistem QC Hold DSS">
   <link href="https://cdn.jsdelivr.net/npm/remixicon@4.6.0/fonts/remixicon.css" rel="stylesheet">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=2.7">
   {% if current_user.is_authenticated %}<meta name="user-role" content="kepala_qc">{% endif %}
   {% block head %}{% endblock %}
 </head>
@@ -40,8 +40,8 @@
       </a>
 
       <div class="nav-section-label">Model & Analisis</div>
-      <a class="nav-item" href="{{ url_for('admin_prediction.prediction_page') }}">
-        <span class="nav-icon"><i class="ri-flashlight-line"></i></span> Prediksi Keputusan
+      <a class="nav-item" href="{{ url_for('admin_c45.c45_page') }}">
+        <span class="nav-icon"><i class="ri-flashlight-line"></i></span> Proses Keputusan
       </a>
 
       <div class="nav-section-label">Laporan</div>
@@ -123,7 +123,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
-<script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+<script src="{{ url_for('static', filename='js/admin.js') }}?v=2.7"></script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

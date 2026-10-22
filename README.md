@@ -1,11 +1,5 @@
 # Panduan Lengkap Instalasi & Setup Aplikasi QC System
 
-Dokumen ini ditujukan untuk siapapun (termasuk teman Anda) yang baru saja mengunduh (_download_) atau melakukan _clone_ terhadap repositori aplikasi ini dari GitHub, agar bisa menjalankannya di komputer masing-masing.
-
----
-
-## Persyaratan Sistem
-
 Sebelum memulai, pastikan komputer Anda telah terinstal beberapa software berikut:
 
 1. **Python** (Versi 3.8 atau yang lebih baru) - pastikan saat instalasi Anda mencentang opsi `"Add Python to PATH"`.
@@ -29,7 +23,7 @@ Atau jika Anda mengunduh berformat `.zip`, cukup ekstrak file tersebut dan buka 
 
 ### 2. Membuat File Environment / Konfigurasi
 
-Aplikasi Flask ini membutuhkan file konfigurasi keamanan dan database yang disembunyikan (_ignored_ oleh Git). Anda harus membuat konfigurasinya secara manual:
+Aplikasi Flask ini membutuhkan file konfigurasi keamanan dan database yang disembunyikan (_ignored_ oleh Git). User harus membuat konfigurasinya secara manual:
 
 1. Copy file `.env.example` lalu ubah namanya (rename) menjadi `.env`.
    - Di terminal (Linux/Mac): `cp .env.example .env`
@@ -79,10 +73,10 @@ mysql -u root -p qc_system < migrations/0001_init.sql
 
 ### 5. Menjalankan Aplikasi Web
 
-Setelah konfigurasi dan database selesai dibuat, aplikasi sudah bisa dijalankan. Di terminal Anda, ketikkan:
+Setelah konfigurasi dan database selesai dibuat, aplikasi sudah bisa dijalankan. Di terminal User, ketikkan:
 
 ```bash
-python run.py
+python main.py
 ```
 
 Aplikasi akan mulai berjalan. Akan muncul teks seperti `Running on http://127.0.0.1:5000`.
@@ -91,14 +85,14 @@ Aplikasi akan mulai berjalan. Akan muncul teks seperti `Running on http://127.0.
 
 ## Mengakses Aplikasi
 
-Buka Browser pilihan Anda (Chrome/Firefox/Edge) dan ketikkan alamat:
+Buka Browser pilihan (Chrome/Firefox/Edge) dan ketikkan alamat:
 **http://localhost:5000**
 
 **Login Default Bawaan:**
 
 - **Username:** `admin`
-- **Password:** `Admin@123`
+- **Password:** `admin@123`
 
-Setelah berhasil login, Anda bisa membuat pengguna (User) tambahan, mengatur Master Data, dan melakukan Manajemen QC Hold!
+Setelah berhasil login, bisa membuat pengguna (User) tambahan, mengatur Master Data, dan melakukan Manajemen QC Hold!
 
 > **PENTING:** Jika ada fitur yang terasa error terkait _Import Excel_, pastikan Anda benar-benar telah menjalankan _step_ nomor 3 (`pip install -r requirements.txt`) sehingga _library_ seperti `pandas` dan `openpyxl` terinstal dengan benar.

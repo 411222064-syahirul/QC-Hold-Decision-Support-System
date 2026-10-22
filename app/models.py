@@ -103,9 +103,10 @@ class QcHold(db.Model):
     qty_ok = db.Column(db.Integer, default=0)
     image_url = db.Column(db.Text)
     decision_action_id = db.Column(db.Integer, db.ForeignKey('decision_action.id', ondelete='SET NULL'))
+    decision_status = db.Column(db.String(10))
     action_taken_by = db.Column(db.BigInteger, db.ForeignKey('users.id', ondelete='SET NULL'))
     action_taken_at = db.Column(db.DateTime)
-    prediction_id = db.Column(db.BigInteger)
+    c45_record_id = db.Column(db.BigInteger)
     status = db.Column(db.String(10), default='OPEN')
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -131,8 +132,13 @@ class QcHold(db.Model):
             'defect_category_id': self.defect_category_id,
             'defect_severity': self.defect_severity,
             'decision_action': self.decision_action.label if self.decision_action else None,
+            'decision_action_code': self.decision_action.code if self.decision_action else None,
             'decision_action_id': self.decision_action_id,
-            'prediction_id': getattr(self, 'prediction_id', None),
+            'decision_status': self.decision_status or (
+                ('NO' if ('DISPOSAL' in self.decision_action.code.upper() or 'SCRAP' in self.decision_action.code.upper()) else 'YES')
+                if self.decision_action else None
+            ),
+            'c45_record_id': getattr(self, 'c45_record_id', None),
             'status': getattr(self, 'status', None),
             'notes': getattr(self, 'notes', None),
             'defect_description': self.defect_description,
@@ -180,48 +186,121 @@ class Dataset(db.Model):
 
 
 class DatasetRecord(db.Model):
+    """Record dataset (TRAIN / TEST) yang berdiri sendiri, terpisah dari tabel qc_hold.
+
+    Setiap record menyimpan snapshot fitur + label C4.5 miliknya sendiri, sehingga:
+    - Upload Excel/CSV dataset TIDAK lagi membuat baris di tabel qc_hold.
+    - Perubahan / penghapusan data QC Hold operasional tidak mengubah dataset.
+    - qc_hold_id hanya referensi sumber (opsional) bila record disalin dari QC Hold.
+    """
     __tablename__ = 'dataset_record'
     id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     dataset_id = db.Column(db.BigInteger, db.ForeignKey('dataset.id', ondelete='CASCADE'), nullable=False)
-    qc_hold_id = db.Column(db.BigInteger, db.ForeignKey('qc_hold.id', ondelete='CASCADE'), nullable=False)
+    # Referensi sumber (opsional). NULL bila record berasal dari upload file.
+    qc_hold_id = db.Column(db.BigInteger, db.ForeignKey('qc_hold.id', ondelete='SET NULL'), nullable=True)
+    source = db.Column(db.String(20), default='UPLOAD')  # UPLOAD | QC_HOLD | SPLIT | MERGE
+    record_code = db.Column(db.String(80))
+    part_no = db.Column(db.String(100))
+    product_category_id = db.Column(db.Integer, db.ForeignKey('product_category.id', ondelete='SET NULL'))
+    defect_category_id = db.Column(db.Integer, db.ForeignKey('defect_category.id', ondelete='SET NULL'))
+    defect_severity = db.Column(db.SmallInteger)
+    defect_description = db.Column(db.Text)
+    decision_action_id = db.Column(db.Integer, db.ForeignKey('decision_action.id', ondelete='SET NULL'))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     dataset = db.relationship('Dataset', backref=db.backref('records', lazy='dynamic', cascade='all, delete-orphan'))
     qc_hold = db.relationship('QcHold', backref=db.backref('dataset_records', lazy='dynamic'))
+    product_category = db.relationship('ProductCategory', foreign_keys=[product_category_id])
+    defect_category = db.relationship('DefectCategory', foreign_keys=[defect_category_id])
+    decision_action = db.relationship('DecisionAction', foreign_keys=[decision_action_id])
 
     __table_args__ = (db.UniqueConstraint('dataset_id', 'qc_hold_id', name='uq_dataset_qc'),)
 
+    @property
+    def sample_key(self):
+        """Identitas sampel untuk deteksi overlap (data leakage) antar dataset."""
+        if self.qc_hold_id:
+            return f'Q{self.qc_hold_id}'
+        return f'C{self.record_code}'
+
+    @classmethod
+    def from_qc_hold(cls, dataset_id, qc, source='QC_HOLD'):
+        """Salin (snapshot) fitur & label dari QC Hold ke record dataset baru."""
+        return cls(
+            dataset_id=dataset_id,
+            qc_hold_id=qc.id,
+            source=source,
+            record_code=qc.qc_code,
+            part_no=qc.part_no,
+            product_category_id=qc.product_category_id,
+            defect_category_id=qc.defect_category_id,
+            defect_severity=qc.defect_severity,
+            defect_description=qc.defect_description,
+            decision_action_id=qc.decision_action_id,
+        )
+
+    def clone_to(self, dataset_id, source=None):
+        """Salin record ini ke dataset lain (dipakai untuk split / merge)."""
+        return DatasetRecord(
+            dataset_id=dataset_id,
+            qc_hold_id=self.qc_hold_id,
+            source=source or self.source,
+            record_code=self.record_code,
+            part_no=self.part_no,
+            product_category_id=self.product_category_id,
+            defect_category_id=self.defect_category_id,
+            defect_severity=self.defect_severity,
+            defect_description=self.defect_description,
+            decision_action_id=self.decision_action_id,
+        )
+
     def to_dict(self):
         return {
-            'id': self.id, 'dataset_id': self.dataset_id,
-            'qc_hold_id': self.qc_hold_id, 'created_at': str(self.created_at),
+            'id': self.id,
+            'dataset_record_id': self.id,
+            'dataset_id': self.dataset_id,
+            'qc_hold_id': self.qc_hold_id,
+            'source': self.source,
+            'record_code': self.record_code,
+            'qc_code': self.record_code,  # kompatibilitas tampilan lama
+            'part_no': self.part_no,
+            'product_category_id': self.product_category_id,
+            'product_category': self.product_category.name if self.product_category else None,
+            'defect_category_id': self.defect_category_id,
+            'defect_category': self.defect_category.name if self.defect_category else None,
+            'defect_severity': self.defect_severity,
+            'defect_description': self.defect_description,
+            'decision_action_id': self.decision_action_id,
+            'decision_action': self.decision_action.label if self.decision_action else None,
+            'decision_action_code': self.decision_action.code if self.decision_action else None,
+            'created_at': str(self.created_at),
         }
 
 
-class Prediction(db.Model):
-    __tablename__ = 'prediction'
+class DecisionRecord(db.Model):
+    __tablename__ = 'c45_decision'
     id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     model_id = db.Column(db.BigInteger, db.ForeignKey('models.id', ondelete='SET NULL'))
     qc_hold_id = db.Column(db.BigInteger, db.ForeignKey('qc_hold.id', ondelete='SET NULL'))
-    predicted_action_id = db.Column(db.Integer, db.ForeignKey('decision_action.id', ondelete='SET NULL'))
+    action_id = db.Column(db.Integer, db.ForeignKey('decision_action.id', ondelete='SET NULL'))
     probability = db.Column(db.Numeric(5, 4))
-    predicted_by = db.Column(db.BigInteger, db.ForeignKey('users.id', ondelete='SET NULL'))
-    predicted_at = db.Column(db.DateTime, default=datetime.utcnow)
+    processed_by = db.Column(db.BigInteger, db.ForeignKey('users.id', ondelete='SET NULL'))
+    processed_at = db.Column(db.DateTime, default=datetime.utcnow)
     details = db.Column(db.JSON)
 
     ml_model = db.relationship('MLModel', foreign_keys=[model_id])
     qc_hold = db.relationship('QcHold', foreign_keys=[qc_hold_id])
-    predicted_action = db.relationship('DecisionAction', foreign_keys=[predicted_action_id])
-    user = db.relationship('User', foreign_keys=[predicted_by])
+    action = db.relationship('DecisionAction', foreign_keys=[action_id])
+    user = db.relationship('User', foreign_keys=[processed_by])
 
     def to_dict(self):
         return {
             'id': self.id, 'model_id': self.model_id,
             'qc_hold_id': self.qc_hold_id,
-            'predicted_action': self.predicted_action.label if self.predicted_action else None,
-            'predicted_action_code': self.predicted_action.code if self.predicted_action else None,
+            'action': self.action.label if self.action else None,
+            'action_code': self.action.code if self.action else None,
             'probability': float(self.probability) if self.probability else None,
-            'predicted_at': str(self.predicted_at),
+            'processed_at': str(self.processed_at),
             'details': self.details,
         }
 

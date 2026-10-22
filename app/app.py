@@ -160,7 +160,7 @@ def create_app():
     from .admin.datasets import bp as datasets_bp
     from .admin.reports import bp as reports_bp
     from .admin.profile import bp as profile_bp
-    from .admin.prediction import bp as prediction_bp
+    from .admin.c45 import bp as c45_bp
     from .admin.model_ml import bp as model_ml_bp
     app.register_blueprint(users_bp)
     app.register_blueprint(master_bp)
@@ -168,7 +168,7 @@ def create_app():
     app.register_blueprint(datasets_bp)
     app.register_blueprint(reports_bp)
     app.register_blueprint(profile_bp)
-    app.register_blueprint(prediction_bp)
+    app.register_blueprint(c45_bp)
     app.register_blueprint(model_ml_bp)
 
     # Register qc_line blueprint

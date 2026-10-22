@@ -58,11 +58,12 @@
           <th>JENIS MASALAH</th>
           <th>TINDAKAN KOREKSI</th>
           <th>Status</th>
+          <th>Kondisi</th>
           <th>Aksi</th>
         </tr>
       </thead>
       <tbody id="qc-tbody">
-        <tr><td colspan="9" class="table-empty"><div class="spinner"></div></td></tr>
+        <tr><td colspan="10" class="table-empty"><div class="spinner"></div></td></tr>
       </tbody>
     </table>
   </div>
@@ -224,6 +225,11 @@ const QcLinePage = (() => {
       const decision = r.decision_action
         ? `<span class="badge badge-neutral">${esc(r.decision_action)}</span>`
         : '<span style="color:var(--text-muted)">—</span>';
+      const decStatus = r.decision_status === 'YES'
+        ? '<span class="badge" style="background:#dcfce7;color:#15803d;border:1px solid #86efac;font-weight:700;">YES</span>'
+        : r.decision_status === 'NO'
+        ? '<span class="badge" style="background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;font-weight:700;">NO</span>'
+        : '<span style="color:var(--text-muted)">—</span>';
       const isOpen = r.status === 'OPEN';
       const statusBadge = isOpen
         ? '<span class="badge" style="background:var(--warning-soft);color:var(--warning);">OPEN</span>'
@@ -241,6 +247,7 @@ const QcLinePage = (() => {
         <td><span class="badge badge-neutral">${r.qty_total}</span> / <span class="badge badge-danger">${r.qty_ng}</span></td>
         <td class="text-small">${esc(r.defect_category || '—')} ${sev}</td>
         <td>${decision}</td>
+        <td>${decStatus}</td>
         <td>${statusBadge}</td>
         <td class="text-nowrap">${actions}</td>
       </tr>`;

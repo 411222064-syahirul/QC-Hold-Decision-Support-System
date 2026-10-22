@@ -1,0 +1,280 @@
+{% extends "base.html" %} {% block title %}Proses Keputusan C4.5{% endblock %}
+{% block page_title %}Proses Keputusan C4.5{% endblock %} {% block page_subtitle
+%}Pilih data QC Hold berstatus OPEN, jalankan proses keputusan, dan konfirmasi
+hasilnya{% endblock %} {% block topbar_actions %}
+<button
+  class="btn btn-secondary"
+  id="btn-select-all"
+  onclick="C45Page.toggleSelectAll()"
+>
+  <i class="ri-checkbox-multiple-line"></i> Pilih Semua
+</button>
+<button
+  class="btn btn-primary"
+  id="btn-process"
+  onclick="C45Page.runProcess()"
+  disabled
+>
+  <i class="ri-brain-line"></i> Proses Keputusan
+</button>
+<button
+  class="btn btn-secondary"
+  id="btn-discard"
+  onclick="C45Page.discardResults()"
+  style="display: none"
+>
+  <i class="ri-close-line"></i> Batal
+</button>
+<button
+  class="btn btn-success"
+  id="btn-confirm"
+  onclick="C45Page.confirmResults()"
+  style="display: none"
+>
+  <i class="ri-check-double-line"></i> Konfirmasi &amp; Terapkan
+</button>
+{% endblock %} {% block head %}
+<style>
+  .prob-bar-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 120px;
+  }
+  .prob-bar-bg {
+    flex: 1;
+    height: 6px;
+    background: var(--bg-soft);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .prob-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.5s ease;
+  }
+  .prob-label {
+    font-size: 11px;
+    font-weight: 700;
+    min-width: 38px;
+    text-align: right;
+  }
+
+  .badge-disposal {
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fca5a5;
+  }
+  .badge-ok {
+    background: #f0fdf4;
+    color: #16a34a;
+    border: 1px solid #86efac;
+  }
+  .badge-rework {
+    background: #fffbeb;
+    color: #d97706;
+    border: 1px solid #fcd34d;
+  }
+  .badge-disposisi {
+    background: #eff6ff;
+    color: #2563eb;
+    border: 1px solid #93c5fd;
+  }
+  .badge-neutral {
+    background: #f8fafc;
+    color: #64748b;
+    border: 1px solid #cbd5e1;
+  }
+
+  .badge-status-yes {
+    background: #dcfce7;
+    color: #15803d;
+    border: 1px solid #86efac;
+    font-weight: 700;
+    padding: 4px 10px;
+    letter-spacing: 0.5px;
+  }
+  .badge-status-no {
+    background: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #fca5a5;
+    font-weight: 700;
+    padding: 4px 10px;
+    letter-spacing: 0.5px;
+  }
+
+  #c45-table tbody tr.processed-row {
+    background: linear-gradient(
+      90deg,
+      var(--bg-card) 0%,
+      rgba(99, 102, 241, 0.06) 100%
+    );
+  }
+
+  .result-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  /* Checkbox col */
+  .col-check {
+    width: 40px;
+    text-align: center;
+  }
+  input[type="checkbox"].row-cb {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: var(--primary);
+  }
+</style>
+{% endblock %} {% block content %}
+<!-- Status bar -->
+<div class="card" style="padding: 14px 20px; margin-bottom: 16px">
+  <div
+    style="
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      flex-wrap: wrap;
+    "
+  >
+    <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap">
+      <div style="display: flex; align-items: center; gap: 8px">
+        <span
+          style="
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #22c55e;
+            display: inline-block;
+          "
+        ></span>
+        <span id="model-status-label" style="font-size: 13px; font-weight: 600"
+          >Memuat status model...</span
+        >
+      </div>
+      <div
+        style="
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 12px;
+          color: var(--text-muted);
+        "
+      >
+        <i class="ri-checkbox-line"></i>
+        <span id="selected-count">0 dipilih</span>
+      </div>
+      <div
+        style="
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 12px;
+          color: var(--text-muted);
+        "
+      >
+        <i class="ri-flashlight-line"></i>
+        <span id="processed-count" style="display: none"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Main table -->
+<div class="card">
+  <div class="card-header">
+    <div>
+      <div class="card-title">
+        <i class="ri-table-line"></i> Data QC Hold (Kasus Aktif / OPEN)
+      </div>
+      <div class="card-subtitle">
+        Centang baris yang ingin diproses, lalu klik "Proses Keputusan"
+      </div>
+    </div>
+    <button class="btn btn-sm btn-secondary" onclick="C45Page.refresh()">
+      <i class="ri-refresh-line"></i> Refresh
+    </button>
+  </div>
+
+  <div class="table-wrap">
+    <table id="c45-table">
+      <thead>
+        <tr>
+          <th class="col-check">
+            <input
+              type="checkbox"
+              id="cb-all"
+              onchange="C45Page.onAllCheck(this)"
+              title="Pilih semua"
+            />
+          </th>
+          <th>NO QC HOLD</th>
+          <th>TGL QC HOLD</th>
+          <th>KATEGORI PRODUK</th>
+          <th>QTY (Plan/Defect)</th>
+          <th>JENIS MASALAH</th>
+          <th>SEVERITY</th>
+          <th>KEPUTUSAN</th>
+          <th>STATUS</th>
+        </tr>
+      </thead>
+      <tbody id="c45-tbody">
+        <tr>
+          <td colspan="10" class="table-empty"><div class="spinner"></div></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Preview panel (shown after process) -->
+<div id="preview-panel" style="display: none">
+  <div
+    class="card"
+    style="
+      border: 2px solid var(--primary);
+      background: linear-gradient(
+        135deg,
+        rgba(99, 102, 241, 0.04),
+        rgba(99, 102, 241, 0.01)
+      );
+    "
+  >
+    <div class="card-header" style="padding-bottom: 12px">
+      <div>
+        <div class="card-title" style="color: var(--primary)">
+          <i class="ri-brain-line"></i> Hasil Proses Keputusan — Preview
+        </div>
+        <div class="card-subtitle">
+          Periksa hasil keputusan dan status di bawah ini. Klik
+          <strong>Konfirmasi &amp; Terapkan</strong> untuk menyimpan secara
+          permanen.
+        </div>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table id="preview-table">
+        <thead>
+          <tr>
+            <th>NO QC HOLD</th>
+            <th>KATEGORI PRODUK</th>
+            <th>JENIS MASALAH &amp; SEVERITY</th>
+            <th>KEPUTUSAN (DECISION)</th>
+            <th>STATUS</th>
+            <th>KETERANGAN TINDAK LANJUT</th>
+          </tr>
+        </thead>
+        <tbody id="preview-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block scripts %}
+<script>
+  C45Page.init();
+</script>
+{% endblock %}
