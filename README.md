@@ -96,3 +96,4 @@ Buka Browser pilihan (Chrome/Firefox/Edge) dan ketikkan alamat:
 Setelah berhasil login, bisa membuat pengguna (User) tambahan, mengatur Master Data, dan melakukan Manajemen QC Hold!
 
 > **PENTING:** Jika ada fitur yang terasa error terkait _Import Excel_, pastikan Anda benar-benar telah menjalankan _step_ nomor 3 (`pip install -r requirements.txt`) sehingga _library_ seperti `pandas` dan `openpyxl` terinstal dengan benar.
+# QC-Hold-Decision-Support-System
